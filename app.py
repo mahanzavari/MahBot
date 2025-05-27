@@ -31,8 +31,17 @@ login_manager.init_app(app)
 login_manager.login_view = 'auth.login'
 
 # Initialize models
-phi_model = PhiModel()
-gemma_model = GemmaModel()
+try:
+    phi_model = PhiModel()
+except Exception as e:
+    print(f"Warning: Failed to load Phi model: {str(e)}")
+    phi_model = None
+
+try:
+    gemma_model = GemmaModel()
+except Exception as e:
+    print(f"Warning: Failed to load Gemma model: {str(e)}")
+    gemma_model = None
 
 # Register blueprints
 app.register_blueprint(auth)
@@ -122,8 +131,12 @@ def chat():
 
         # Process with selected model
         if model_type == 'gemma':
+            if not gemma_model:
+                return jsonify({'error': 'Gemma model is not available. Please try another model.'}), 503
             response = gemma_model.generate_response(message)
         elif model_type == 'phi':
+            if not phi_model:
+                return jsonify({'error': 'Phi model is not available. Please try another model.'}), 503
             response = phi_model.generate_response(message)
         elif model_type == 'openai':
             if not api_key:

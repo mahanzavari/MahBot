@@ -19,7 +19,7 @@ class PhiModel:
         If you're unsure about something, acknowledge the limitations and suggest consulting a legal professional."""
 
     def format_prompt(self, user_query):
-        return f"""<s><|user|> 
+        return f"""<|user|> 
 {self.system_prompt}<|end|> 
 <|assistant|> 
 <|user|> 

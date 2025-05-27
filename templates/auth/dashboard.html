@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - AI Chatbot</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="top-bar">
+        <h1>Dashboard</h1>
+        <div class="top-bar-controls">
+            <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">
+                <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="display: none;">
+                    <path d="M12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.65 0-3 1.35-3 3s1.35 3 3 3 3-1.35 3-3-1.35-3-3-3zm0-2V4c0-.55-.45-1-1-1s-1 .45-1 1v3c0 .55.45 1 1 1s1-.45 1-1zm0 14c-.55 0-1 .45-1 1v3c0 .55.45 1 1 1s1-.45 1-1v-3c0-.55-.45-1-1-1zM4.93 6.35L3.51 4.93c-.39-.39-1.02-.39-1.41 0-.39.39-.39 1.02 0 1.41l1.42 1.42c.39.39 1.02.39 1.41 0 .39-.39.39-1.02 0-1.41zm14.14 14.14l1.42 1.42c.39.39 1.02.39 1.41 0 .39-.39.39-1.02 0-1.41l-1.42-1.42c-.39-.39-1.02-.39-1.41 0-.39.39-.39 1.02 0 1.41zM4 13c-.55 0-1 .45-1 1s.45 1 1 1h3c.55 0 1-.45 1-1s-.45-1-1-1H4zm14 0c-.55 0-1 .45-1 1s.45 1 1 1h3c.55 0 1-.45 1-1s-.45-1-1-1h-3zM4.93 17.65c-.39.39-.39 1.02 0 1.41l1.42 1.42c.39.39 1.02.39 1.41 0 .39-.39.39-1.02 0-1.41l-1.42-1.42c-.39-.39-1.02-.39-1.41 0zm14.14-14.14c.39-.39.39-1.02 0-1.41l-1.42-1.42c-.39-.39-1.02-.39-1.41 0-.39.39-.39 1.02 0 1.41l1.42 1.42c.39.39 1.02.39 1.41 0z"/>
+                </svg>
+                <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/>
+                </svg>
+            </button>
+            <button class="sign-out-btn" onclick="signOut()" title="Sign out">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+                    <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <div class="dashboard-container">
+        <div class="dashboard-sidebar">
+            <div class="user-profile">
+                <div class="profile-avatar">
+                    {% if user.avatar_url %}
+                        <img src="{{ user.avatar_url }}" alt="Avatar" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover;">
+                    {% else %}
+                        {{ user.username[0].upper() }}
+                    {% endif %}
+                </div>
+                <h2>{{ user.display_name_or_username }}</h2>
+                <p class="user-email">
+                    {{ user.email }}
+                    {% if user.email_verified %}
+                        <span class="verified-badge" title="Email verified">✓</span>
+                    {% else %}
+                        <span class="unverified-badge" title="Email not verified">!</span>
+                        <button onclick="resendVerification()" class="btn secondary" style="margin-top: 0.5rem; font-size: 0.8rem;">Resend Verification</button>
+                    {% endif %}
+                </p>
+                <p class="member-since">Member since {{ user.created_at.strftime('%B %Y') }}</p>
+                <button class="btn secondary" onclick="openProfileModal()" style="margin-top: 1rem;">Profile Settings</button>
+            </div>
+            <nav class="dashboard-nav">
+                <a href="{{ url_for('index') }}" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+                        <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+                    </svg>
+                    Chat
+                </a>
+                <a href="{{ url_for('auth.dashboard') }}" class="nav-item active">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+                        <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
+                    </svg>
+                    Dashboard
+                </a>
+            </nav>
+        </div>
+
+        <div class="dashboard-content">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>Total Chats</h3>
+                    <p class="stat-value">{{ total_chats }}</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Messages</h3>
+                    <p class="stat-value">{{ total_messages }}</p>
+                </div>
+            </div>
+
+            <div class="dashboard-section">
+                <h2>Recent Activity</h2>
+                <div class="activity-chart">
+                    <canvas id="activityChart"></canvas>
+                </div>
+            </div>
+
+            <div class="dashboard-section">
+                <h2>Recent Chats</h2>
+                <div class="recent-chats">
+                    {% for chat in recent_chats %}
+                    <div class="chat-card">
+                        <h3>{{ chat.title }}</h3>
+                        <p class="chat-date">{{ chat.created_at.strftime('%B %d, %Y') }}</p>
+                        <p class="chat-messages">{{ chat.messages|length }} messages</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="profileModal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <h2>Edit Profile</h2>
+            <form id="profileForm">
+                <div class="form-group">
+                    <label for="displayName">Display Name</label>
+                    <input type="text" id="displayName" name="display_name" value="{{ user.display_name or '' }}" placeholder="Enter display name">
+                </div>
+                <div class="form-group">
+                    <label for="avatarUpload">Profile Avatar</label>
+                    <input type="file" id="avatarUpload" name="avatar" accept="image/*">
+                    <div id="avatarPreview" style="margin-top: 0.5rem;">
+                        {% if user.avatar_url %}
+                            <img src="{{ user.avatar_url }}" alt="Avatar Preview" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;">
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="modal-buttons">
+                    <button type="submit" class="btn primary">Save</button>
+                    <button type="button" class="btn secondary" onclick="closeProfileModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="signOutModal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <h2>Sign Out</h2>
+            <p>Are you sure you want to sign out?</p>
+            <div class="modal-buttons">
+                <button onclick="confirmSignOut()" class="btn danger">Sign Out</button>
+                <button onclick="closeSignOutModal()" class="btn secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+    .verified-badge {
+        color: #16a34a;
+        margin-left: 0.5rem;
+        font-weight: bold;
+    }
+
+    .unverified-badge {
+        color: #dc2626;
+        margin-left: 0.5rem;
+        font-weight: bold;
+    }
+
+    .btn.danger {
+        background-color: #dc2626;
+        color: white;
+        border: none;
+    }
+
+    .btn.danger:hover {
+        background-color: #b91c1c;
+    }
+    </style>
+
+    <script>
+        // Theme toggle functionality
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', newTheme);
+            
+            document.querySelector('.sun-icon').style.display = newTheme === 'light' ? 'none' : 'block';
+            document.querySelector('.moon-icon').style.display = newTheme === 'light' ? 'block' : 'none';
+            
+            localStorage.setItem('theme', newTheme);
+        }
+
+        // Load saved theme preference
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            document.querySelector('.sun-icon').style.display = savedTheme === 'light' ? 'none' : 'block';
+            document.querySelector('.moon-icon').style.display = savedTheme === 'light' ? 'block' : 'none';
+
+            // Initialize activity chart
+            const ctx = document.getElementById('activityChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: {{ chat_activity|map(attribute='date')|list|tojson }},
+                    datasets: [{
+                        label: 'Chats per day',
+                        data: {{ chat_activity|map(attribute='count')|list|tojson }},
+                        backgroundColor: 'rgba(37, 99, 235, 0.5)',
+                        borderColor: 'rgb(37, 99, 235)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        });
+
+        // Sign out function
+        function signOut() {
+            document.getElementById('signOutModal').classList.add('active');
+        }
+
+        function closeSignOutModal() {
+            document.getElementById('signOutModal').classList.remove('active');
+        }
+
+        function confirmSignOut() {
+            fetch('/logout', {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = data.redirect;
+                }
+            })
+            .catch(error => {
+                console.error('Error signing out:', error);
+                window.location.href = '/logout';
+            });
+        }
+
+        // Profile modal logic
+        function openProfileModal() {
+            document.getElementById('profileModal').classList.add('active');
+        }
+        function closeProfileModal() {
+            document.getElementById('profileModal').classList.remove('active');
+        }
+        // Avatar preview
+        document.getElementById('avatarUpload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    document.getElementById('avatarPreview').innerHTML = `<img src="${evt.target.result}" alt="Avatar Preview" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;">`;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        // Profile form submit
+        document.getElementById('profileForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            fetch('/auth/profile', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert(data.message || 'Failed to update profile.');
+                }
+            })
+            .catch(() => alert('Failed to update profile.'));
+        });
+
+        function resendVerification() {
+            fetch('/auth/resend-verification', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Verification email sent! Please check your inbox.');
+                } else {
+                    alert(data.message || 'Error sending verification email');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error sending verification email');
+            });
+        }
+    </script>
+</body>
+</html> 

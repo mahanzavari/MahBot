@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - AI Chatbot</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-box">
+            <h1>Sign Up</h1>
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-error">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            <form method="POST" action="{{ url_for('auth.signup') }}" id="signupForm">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required>
+                    <div class="password-strength">
+                        <div class="strength-meter">
+                            <div class="strength-meter-fill" data-strength="0"></div>
+                        </div>
+                        <div class="strength-text">Password strength: <span id="strengthText">Too weak</span></div>
+                    </div>
+                    <div class="password-requirements">
+                        <p class="requirement" data-requirement="length">At least 8 characters</p>
+                        <p class="requirement" data-requirement="uppercase">At least one uppercase letter</p>
+                        <p class="requirement" data-requirement="lowercase">At least one lowercase letter</p>
+                        <p class="requirement" data-requirement="number">At least one number</p>
+                        <p class="requirement" data-requirement="special">At least one special character</p>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="confirm_password">Confirm Password</label>
+                    <input type="password" id="confirm_password" name="confirm_password" required>
+                </div>
+                <button type="submit" class="btn primary" id="signupBtn" disabled>Sign Up</button>
+            </form>
+            <p class="auth-link">
+                Already have an account? <a href="{{ url_for('auth.login') }}">Login</a>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const password = document.getElementById('password');
+            const confirmPassword = document.getElementById('confirm_password');
+            const signupBtn = document.getElementById('signupBtn');
+            const strengthMeter = document.querySelector('.strength-meter-fill');
+            const strengthText = document.getElementById('strengthText');
+            const requirementElements = document.querySelectorAll('.requirement');
+
+            const passwordRequirements = {
+                length: password => password.length >= 8,
+                uppercase: password => /[A-Z]/.test(password),
+                lowercase: password => /[a-z]/.test(password),
+                number: password => /[0-9]/.test(password),
+                special: password => /[^A-Za-z0-9]/.test(password)
+            };
+
+            function checkPasswordStrength(password) {
+                let strength = 0;
+                let metRequirements = 0;
+
+                // Check each requirement
+                for (const [requirement, validator] of Object.entries(passwordRequirements)) {
+                    const requirementElement = document.querySelector(`[data-requirement="${requirement}"]`);
+                    if (validator(password)) {
+                        strength += 20;
+                        metRequirements++;
+                        requirementElement.classList.add('met');
+                    } else {
+                        requirementElement.classList.remove('met');
+                    }
+                }
+
+                // Update strength meter
+                strengthMeter.style.width = `${strength}%`;
+                strengthMeter.dataset.strength = strength;
+
+                // Update strength text
+                if (strength <= 20) {
+                    strengthText.textContent = 'Too weak';
+                    strengthMeter.style.backgroundColor = '#dc2626';
+                } else if (strength <= 40) {
+                    strengthText.textContent = 'Weak';
+                    strengthMeter.style.backgroundColor = '#f97316';
+                } else if (strength <= 60) {
+                    strengthText.textContent = 'Fair';
+                    strengthMeter.style.backgroundColor = '#eab308';
+                } else if (strength <= 80) {
+                    strengthText.textContent = 'Good';
+                    strengthMeter.style.backgroundColor = '#22c55e';
+                } else {
+                    strengthText.textContent = 'Strong';
+                    strengthMeter.style.backgroundColor = '#16a34a';
+                }
+
+                return metRequirements === Object.keys(passwordRequirements).length;
+            }
+
+            function validateForm() {
+                const isPasswordStrong = checkPasswordStrength(password.value);
+                const doPasswordsMatch = password.value === confirmPassword.value;
+                signupBtn.disabled = !(isPasswordStrong && doPasswordsMatch);
+            }
+
+            password.addEventListener('input', validateForm);
+            confirmPassword.addEventListener('input', validateForm);
+        });
+    </script>
+</body>
+</html> 

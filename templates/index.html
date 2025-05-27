@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lysander - Legal AI Assistant</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="top-bar">
+        <h1>Lysander</h1>
+        <div class="top-bar-controls">
+            <a href="{{ url_for('auth.dashboard') }}" class="dashboard-link" title="Dashboard">
+                {% if current_user.avatar_url %}
+                    <img src="{{ current_user.avatar_url }}" alt="Profile" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;">
+                {% else %}
+                    <div style="width: 24px; height: 24px; border-radius: 50%; background-color: var(--primary-color); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600;">
+                        {{ current_user.username[0].upper() }}
+                    </div>
+                {% endif %}
+            </a>
+            <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">
+                <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="display: none;">
+                    <path d="M12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.65 0-3 1.35-3 3s1.35 3 3 3 3-1.35 3-3-1.35-3-3-3zm0-2V4c0-.55-.45-1-1-1s-1 .45-1 1v3c0 .55.45 1 1 1s1-.45 1-1zm0 14c-.55 0-1 .45-1 1v3c0 .55.45 1 1 1s1-.45 1-1v-3c0-.55-.45-1-1-1zM4.93 6.35L3.51 4.93c-.39-.39-1.02-.39-1.41 0-.39.39-.39 1.02 0 1.41l1.42 1.42c.39.39 1.02.39 1.41 0 .39-.39.39-1.02 0-1.41zm14.14 14.14l1.42 1.42c.39.39 1.02.39 1.41 0 .39-.39.39-1.02 0-1.41l-1.42-1.42c-.39-.39-1.02-.39-1.41 0-.39.39-.39 1.02 0 1.41zM4 13c-.55 0-1 .45-1 1s.45 1 1 1h3c.55 0 1-.45 1-1s-.45-1-1-1H4zm14 0c-.55 0-1 .45-1 1s.45 1 1 1h3c.55 0 1-.45 1-1s-.45-1-1-1h-3zM4.93 17.65c-.39.39-.39 1.02 0 1.41l1.42 1.42c.39.39 1.02.39 1.41 0 .39-.39.39-1.02 0-1.41l-1.42-1.42c-.39-.39-1.02-.39-1.41 0zm14.14-14.14c.39-.39.39-1.02 0-1.41l-1.42-1.42c-.39-.39-1.02-.39-1.41 0-.39.39-.39 1.02 0 1.41l1.42 1.42c.39.39 1.02.39 1.41 0z"/>
+                </svg>
+                <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/>
+                </svg>
+            </button>
+            <button class="sign-out-btn" onclick="signOut()" title="Sign out">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+                    <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>Chats</h2>
+                <div class="search-container">
+                    <input type="text" id="chatSearch" placeholder="Search chats..." class="search-input">
+                    <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                </div>
+                <div class="sidebar-controls">
+                    <div class="mode-selector">
+                        <label class="switch">
+                            <input type="checkbox" id="apiModeToggle">
+                            <span class="slider"></span>
+                        </label>
+                        <span>API Mode</span>
+                    </div>
+                    <button id="newChatBtn" class="btn primary">New Chat</button>
+                    <button id="clearHistoryBtn" class="btn secondary" title="Clear Chat History">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 6h18"></path>
+                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                        </svg>
+                        Clear History
+                    </button>
+                </div>
+            </div>
+            <div class="chat-list" id="chatList">
+                <!-- Chat history will be populated here -->
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="chat-container">
+                <div class="messages" id="messages">
+                    <!-- Messages will be populated here -->
+                </div>
+                
+                <div class="input-container">
+                    <div class="input-wrapper">
+                        <label for="imageUpload" class="upload-btn">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                            </svg>
+                        </label>
+                        <input type="file" id="imageUpload" accept="image/*" style="display: none;">
+                        <textarea id="messageInput" placeholder="Type your message..." rows="1"></textarea>
+                        <button id="sendBtn">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div id="imagePreview" class="image-preview-container"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- API Key Modal -->
+    <div id="apiKeyModal" class="modal">
+        <div class="modal-content">
+            <h2>Enter API Key</h2>
+            <input type="password" id="apiKeyInput" placeholder="Enter your API key">
+            <div class="modal-buttons">
+                <button id="saveApiKey" class="btn primary">Save</button>
+                <button id="cancelApiKey" class="btn secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="api-settings">
+        <div class="model-selector">
+            <label for="modelSelect">Select Model:</label>
+            <select id="modelSelect" class="model-select">
+                <option value="gemma" selected>Gemma</option>
+                <option value="phi">Phi-3</option>
+                <option value="openai">OpenAI</option>
+                <option value="gemini">Gemini</option>
+            </select>
+        </div>
+        <div id="apiKeyInput" style="display: none;">
+            <input type="password" id="apiKey" placeholder="Enter API Key">
+            <button onclick="clearApiKey()" class="btn secondary">Clear</button>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script>
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', newTheme);
+            
+            // Update icon visibility
+            document.querySelector('.sun-icon').style.display = newTheme === 'light' ? 'none' : 'block';
+            document.querySelector('.moon-icon').style.display = newTheme === 'light' ? 'block' : 'none';
+            
+            // Save preference
+            localStorage.setItem('theme', newTheme);
+        }
+
+        // Load saved theme preference
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            document.querySelector('.sun-icon').style.display = savedTheme === 'light' ? 'none' : 'block';
+            document.querySelector('.moon-icon').style.display = savedTheme === 'light' ? 'block' : 'none';
+        });
+
+        // Sign out function
+        function signOut() {
+            fetch('/logout', {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = data.redirect;
+                }
+            })
+            .catch(error => {
+                console.error('Error signing out:', error);
+                // Fallback to regular redirect if AJAX fails
+                window.location.href = '/logout';
+            });
+        }
+
+        // Model selection handling
+        document.getElementById('modelSelect').addEventListener('change', function() {
+            const apiKeyInput = document.getElementById('apiKeyInput');
+            if (this.value === 'openai' || this.value === 'gemini') {
+                apiKeyInput.style.display = 'flex';
+            } else {
+                apiKeyInput.style.display = 'none';
+                document.getElementById('apiKey').value = '';
+            }
+        });
+
+        function clearApiKey() {
+            document.getElementById('apiKey').value = '';
+        }
+
+        // Add event listeners for sending messages
+        document.addEventListener('DOMContentLoaded', () => {
+            const sendBtn = document.getElementById('sendBtn');
+            const messageInput = document.getElementById('messageInput');
+
+            // Send message when clicking the send button
+            sendBtn.addEventListener('click', sendMessage);
+
+            // Send message when pressing Enter (but allow Shift+Enter for new lines)
+            messageInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+
+            // Auto-resize textarea
+            messageInput.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
+            });
+        });
+
+        function addMessage(role, content) {
+            const messagesContainer = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}-message`;
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            
+            // Format the content (handle code blocks, links, etc.)
+            const formattedContent = formatMessageContent(content);
+            contentDiv.innerHTML = formattedContent;
+            
+            // Add timestamp
+            const timeDiv = document.createElement('div');
+            timeDiv.className = 'message-time';
+            timeDiv.textContent = new Date().toLocaleTimeString([], { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                hour12: true 
+            });
+            
+            contentDiv.appendChild(timeDiv);
+            messageDiv.appendChild(contentDiv);
+            messagesContainer.appendChild(messageDiv);
+            
+            // Scroll to bottom
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function formatMessageContent(content) {
+            // Convert URLs to clickable links
+            content = content.replace(
+                /(https?:\/\/[^\s]+)/g,
+                '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>'
+            );
+            
+            // Format code blocks
+            content = content.replace(
+                /```([\s\S]*?)```/g,
+                '<pre><code>$1</code></pre>'
+            );
+            
+            // Format inline code
+            content = content.replace(
+                /`([^`]+)`/g,
+                '<code>$1</code>'
+            );
+            
+            // Convert newlines to <br>
+            content = content.replace(/\n/g, '<br>');
+            
+            return content;
+        }
+
+        // Add typing indicator
+        function showTypingIndicator() {
+            const messagesContainer = document.getElementById('messages');
+            const indicator = document.createElement('div');
+            indicator.className = 'typing-indicator';
+            
+            const dotsContainer = document.createElement('div');
+            dotsContainer.className = 'typing-dots';
+            dotsContainer.innerHTML = `
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            `;
+            
+            // Add timestamp
+            const timeDiv = document.createElement('div');
+            timeDiv.className = 'message-time';
+            timeDiv.textContent = new Date().toLocaleTimeString([], { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                hour12: true 
+            });
+            
+            indicator.appendChild(dotsContainer);
+            indicator.appendChild(timeDiv);
+            messagesContainer.appendChild(indicator);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            return indicator;
+        }
+
+        // Update sendMessage function
+        async function sendMessage() {
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value.trim();
+            const modelType = document.getElementById('modelSelect').value;
+            const apiKey = document.getElementById('apiKey').value;
+
+            if (!message) return;
+
+            // Add user message to chat
+            addMessage('user', message);
+            messageInput.value = '';
+            messageInput.style.height = 'auto';
+
+            // Show typing indicator
+            const typingIndicator = showTypingIndicator();
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message,
+                        chat_id: currentChatId,
+                        model_type: modelType,
+                        api_key: (modelType === 'openai' || modelType === 'gemini') ? apiKey : undefined
+                    })
+                });
+
+                // Remove typing indicator
+                typingIndicator.remove();
+
+                const data = await response.json();
+                if (data.error) {
+                    addMessage('bot', `Error: ${data.error}`);
+                } else {
+                    addMessage('bot', data.response);
+                }
+            } catch (error) {
+                // Remove typing indicator
+                typingIndicator.remove();
+                
+                console.error('Error:', error);
+                addMessage('bot', 'Error: Failed to send message');
+            }
+        }
+
+        // Add clear history functionality
+        document.getElementById('clearHistoryBtn').addEventListener('click', async function() {
+            if (confirm('Are you sure you want to clear all chat history? This action cannot be undone.')) {
+                try {
+                    const response = await fetch('/api/chats', {
+                        method: 'DELETE'
+                    });
+                    
+                    if (response.ok) {
+                        // Clear the chat list
+                        document.getElementById('chatList').innerHTML = '';
+                        // Clear the messages
+                        document.getElementById('messages').innerHTML = '';
+                        // Reset current chat ID
+                        currentChatId = null;
+                    } else {
+                        const data = await response.json();
+                        alert(data.error || 'Failed to clear chat history');
+                    }
+                } catch (error) {
+                    console.error('Error clearing chat history:', error);
+                    alert('Failed to clear chat history');
+                }
+            }
+        });
+    </script>
+
+    <style>
+    .api-settings {
+        padding: 1rem;
+        background-color: var(--bg-secondary);
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .model-selector {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .model-select {
+        padding: 0.5rem;
+        border: 1px solid var(--border-color);
+        border-radius: 0.5rem;
+        background-color: var(--background-color);
+        color: var(--text-color);
+        font-family: inherit;
+        font-size: 0.9rem;
+        min-width: 150px;
+    }
+
+    .model-select:focus {
+        outline: none;
+        border-color: var(--primary-color);
+    }
+
+    #apiKeyInput {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+
+    #apiKeyInput input {
+        flex: 1;
+        padding: 0.5rem;
+        border: 1px solid var(--border-color);
+        border-radius: 0.25rem;
+        background-color: var(--background-color);
+        color: var(--text-color);
+    }
+    </style>
+</body>
+</html> 

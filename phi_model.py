@@ -14,28 +14,39 @@ class PhiModel:
             n_gpu_layers=0  # Number of layers to offload to GPU
         )
         
-        self.system_prompt = """You are a helpful AI assistant for a legal Q&A chatbot. 
+        self.system_prompt = """You are a helpful AI assistant. 
         Provide accurate, concise, and helpful responses to legal questions. 
+        do not proivde a long response unless you are told to.
         If you're unsure about something, acknowledge the limitations and suggest consulting a legal professional."""
 
-    def format_prompt(self, user_query):
-        return f"""<|user|> 
-{self.system_prompt}<|end|> 
-<|assistant|> 
-<|user|> 
-{user_query}<|end|> 
-<|assistant|>"""
-
-    def generate_response(self, user_query):
-        prompt = self.format_prompt(user_query)
+    def generate_response(self, messages):
+        if not self.llm:
+            return "Error: Phi model is not loaded. Please check the model file and try again."
         
-        response = self.llm(
-            prompt,
-            max_tokens=512,
-            temperature=0.7,
-            top_p=0.95,
-            stop=["<|end|>", "<|user|>"],
-            echo=False
-        )
-        
-        return response['choices'][0]['text'].strip() 
+        try:
+            # Format the conversation history using the buffer's formatting method
+            from chat_buffer import ChatBuffer
+            buffer = ChatBuffer()
+            for msg in messages:
+                buffer.add_message(msg['role'], msg['content'])
+            prompt = buffer.format_for_phi()
+            
+            response = self.llm(
+                prompt,
+                max_tokens=1024,
+                temperature=0.7,
+                stop=["<|end|>", "<|user|>"],
+                echo=False
+            )
+            
+            if response and 'choices' in response and len(response['choices']) > 0:
+                generated_text = response['choices'][0]['text'].strip()
+                # Clean up any remaining markers
+                generated_text = generated_text.replace("<|user|>", "").replace("<|assistant|>", "").replace("<|end|>", "").strip()
+                return generated_text
+            else:
+                return None
+                
+        except Exception as e:
+            print(f"Error generating response: {str(e)}")
+            return None 

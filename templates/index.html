@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="format-detection" content="telephone=no">
-    <title>Lysander - Legal AI Assistant</title>
+    <title>Calliope - Legal AI Assistant</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- Add marked library for markdown parsing -->
@@ -119,6 +119,7 @@
                         </button>
                     </div>
                     <div id="imagePreview" class="image-preview-container"></div>
+                    <div id="tokenCount" class="token-count">Tokens: 0/64000</div>
                     </div>
                 </div>
             </div>
@@ -1308,6 +1309,21 @@
 
     .btn.danger:hover {
         background-color: var(--danger-color-dark);
+    }
+
+    .token-count {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        text-align: right;
+        padding: 0.5rem;
+        margin-top: 0.5rem;
+    }
+
+    @media screen and (max-width: 768px) {
+        .token-count {
+            font-size: 0.7rem;
+            padding: 0.25rem;
+        }
     }
     </style>
 </body>

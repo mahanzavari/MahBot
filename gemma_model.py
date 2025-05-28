@@ -26,15 +26,20 @@ class GemmaModel:
         
         self.system_prompt = """You are a helpful and friendly AI assistant. You provide clear, accurate, and engaging responses to questions and tasks. 
         You maintain a conversational tone while being informative and precise. When you're unsure about something, you acknowledge it and suggest alternative approaches.
-
+        do not proivde a long response unless you are told to.
         Always aim to be helpful, honest, and respectful in your responses."""
 
-    def generate_response(self, prompt):
+    def generate_response(self, messages):
         if not self.llm:
             return "Error: Gemma model is not loaded. Please check the model file and try again."
         
         try:
-            full_prompt = f"<start_of_turn>user\n{self.system_prompt}\n\n{prompt}<end_of_turn>\n<start_of_turn>model\n"
+            # Format the conversation history using the buffer's formatting method
+            from chat_buffer import ChatBuffer
+            buffer = ChatBuffer()
+            for msg in messages:
+                buffer.add_message(msg['role'], msg['content'])
+            full_prompt = buffer.format_for_gemma()
             
             response = self.llm(
                 full_prompt,
@@ -44,7 +49,14 @@ class GemmaModel:
                 echo=False
             )
             
-            return response['choices'][0]['text'].strip()
+            if response and 'choices' in response and len(response['choices']) > 0:
+                generated_text = response['choices'][0]['text'].strip()
+                # Clean up any remaining markers
+                generated_text = generated_text.replace("<start_of_turn>", "").replace("<end_of_turn>", "").strip()
+                return generated_text
+            else:
+                return None
+                
         except Exception as e:
             print(f"Error generating response: {str(e)}")
-            return f"Error: Failed to generate response. {str(e)}" 
+            return None 

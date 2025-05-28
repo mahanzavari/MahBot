@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template, url_for
+from flask import Flask, request, jsonify, render_template, url_for, Response, stream_with_context
 from flask_cors import CORS
 from flask_login import LoginManager, login_required, current_user
 from flask_migrate import Migrate
@@ -18,6 +18,16 @@ from utils import send_verification_email
 from phi_model import PhiModel
 from gemma_model import GemmaModel
 from gemma_3_model import Gemma3Model
+from chat_buffer import ChatBuffer
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -34,21 +44,27 @@ login_manager.login_view = 'auth.login'
 # Initialize models
 try:
     phi_model = PhiModel()
+    logger.info("Phi model initialized successfully")
 except Exception as e:
-    print(f"Warning: Failed to load Phi model: {str(e)}")
+    logger.error(f"Failed to load Phi model: {str(e)}")
     phi_model = None
 
 try:
     gemma_model = GemmaModel()
+    logger.info("Gemma model initialized successfully")
 except Exception as e:
-    print(f"Warning: Failed to load Gemma model: {str(e)}")
+    logger.error(f"Failed to load Gemma model: {str(e)}")
     gemma_model = None
 
 try:
     gemma_3_model = Gemma3Model()
+    logger.info("Gemma 3 model initialized successfully")
 except Exception as e:
-    print(f"Warning: Failed to load Gemma 3 model: {str(e)}")
+    logger.error(f"Failed to load Gemma 3 model: {str(e)}")
     gemma_3_model = None
+
+# Store chat buffers for each user
+chat_buffers = {}
 
 # Register blueprints
 app.register_blueprint(auth)
@@ -56,6 +72,33 @@ app.register_blueprint(auth)
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+def get_user_buffer(user_id: int) -> ChatBuffer:
+    """Get or create a chat buffer for a user."""
+    if user_id not in chat_buffers:
+        logger.debug(f"Creating new buffer for user {user_id}")
+        chat_buffers[user_id] = ChatBuffer()
+    else:
+        logger.debug(f"Retrieved existing buffer for user {user_id}")
+    return chat_buffers[user_id]
+
+def print_buffer_contents(buffer: ChatBuffer, user_id: int, stage: str = ""):
+    """Print the current contents of the chat buffer with additional debugging info."""
+    logger.debug(f"\n{'='*50}")
+    logger.debug(f"Buffer State - {stage}")
+    logger.debug(f"User ID: {user_id}")
+    logger.debug(f"Buffer ID: {id(buffer)}")
+    logger.debug(f"Total Messages: {len(buffer.messages)}")
+    logger.debug(f"Token Count: {buffer.get_token_count()}/{buffer.max_tokens}")
+    logger.debug(f"Buffer Contents:")
+    
+    for i, msg in enumerate(buffer.messages, 1):
+        logger.debug(f"\nMessage {i}:")
+        logger.debug(f"Role: {msg['role']}")
+        logger.debug(f"Content: {msg['content']}")
+        logger.debug(f"Tokens: {len(buffer.encoding.encode(msg['content']))}")
+    
+    logger.debug(f"{'='*50}\n")
 
 @app.route('/')
 @login_required
@@ -111,57 +154,154 @@ def chat():
         data = request.get_json()
         message = data.get('message')
         chat_id = data.get('chat_id')
-        model_type = data.get('model_type', 'gemma')  # Default to gemma if not specified
-        api_key = data.get('api_key')
+        model_type = data.get('model_type', 'gemma')
+        is_new_chat = data.get('is_new_chat', False)  # Add flag for new chat
+
+        logger.info(f"Received chat request - User: {current_user.id}, Chat ID: {chat_id}, Model: {model_type}, New Chat: {is_new_chat}")
+        logger.debug(f"Message content: {message}")
 
         if not message:
+            logger.warning("No message provided in request")
             return jsonify({'error': 'No message provided'}), 400
 
-        # Select model based on model_type
-        if model_type == 'gemma':
-            if not gemma_model:
-                return jsonify({'error': 'Gemma model is not available. Please try another model.'}), 503
-            response = gemma_model.generate_response(message)
-        elif model_type == 'gemma-3-4b-it-q6_k':
-            if not gemma_3_model:
-                return jsonify({'error': 'Gemma 3 model is not available. Please try another model.'}), 503
-            response = gemma_3_model.generate_response(message)
-        elif model_type == 'phi':
-            if not phi_model:
-                return jsonify({'error': 'Phi model is not available. Please try another model.'}), 503
-            response = phi_model.generate_response(message)
+        # Get or create chat buffer for the user
+        buffer = get_user_buffer(current_user.id)
+
+        # Only clear buffer if explicitly starting a new chat
+        if is_new_chat:
+            logger.info(f"Starting new chat for user {current_user.id}")
+            buffer.clear()
+            print_buffer_contents(buffer, current_user.id, "New Chat - Buffer Cleared")
+        elif not chat_id:
+            # If no chat_id but not explicitly new chat, create a new chat but keep buffer
+            logger.info(f"Creating new chat for user {current_user.id} without clearing buffer")
         else:
-            return jsonify({'error': 'Invalid model type'}), 400
+            # Load existing messages into buffer if not already loaded
+            if not buffer.messages:
+                logger.info(f"Loading existing chat {chat_id} for user {current_user.id}")
+                chat = Chat.query.get(chat_id)
+                if chat and chat.user_id == current_user.id:
+                    if not buffer.load_from_db_messages(chat.messages):
+                        logger.warning(f"Chat history too long for user {current_user.id}")
+                        return jsonify({
+                            'error': 'Chat history too long. Please start a new chat.',
+                            'token_count': buffer.get_token_count(),
+                            'max_tokens': buffer.max_tokens
+                        }), 400
+                    print_buffer_contents(buffer, current_user.id, "Loaded Existing Chat")
 
-        if response is None:
-            return jsonify({'error': 'Failed to generate response'}), 500
+        # Print buffer contents before adding new message
+        print_buffer_contents(buffer, current_user.id, "Before Adding User Message")
 
-        # Save chat history
-        if chat_id:
-            chat = Chat.query.get(chat_id)
-            if chat:
+        # Try to add the new message to the buffer
+        if not buffer.add_message('user', message):
+            logger.warning(f"Message would exceed token limit for user {current_user.id}")
+            return jsonify({
+                'error': 'Message would exceed token limit. Please start a new chat.',
+                'token_count': buffer.get_token_count(),
+                'max_tokens': buffer.max_tokens
+            }), 400
+
+        # Print buffer contents after adding new message
+        print_buffer_contents(buffer, current_user.id, "After Adding User Message")
+
+        def generate():
+            # Initialize chat_id
+            chat_id = None
+            
+            # Get all messages from buffer
+            messages = buffer.get_messages()
+            logger.info(f"\n{'='*50}")
+            logger.info(f"Generating response for user {current_user.id}")
+            logger.info(f"Model type: {model_type}")
+            logger.info(f"Number of messages in buffer: {len(messages)}")
+            logger.info(f"{'='*50}\n")
+            
+            # Select model based on model_type
+            if model_type == 'gemma':
+                if not gemma_model:
+                    logger.error("Gemma model not available")
+                    yield json.dumps({'error': 'Gemma model is not available. Please try another model.'}) + '\n'
+                    return
+                logger.info("Using Gemma model for response generation")
+                response = gemma_model.generate_response(messages)
+            elif model_type == 'gemma-3-4b-it-q6_k':
+                if not gemma_3_model:
+                    logger.error("Gemma 3 model not available")
+                    yield json.dumps({'error': 'Gemma 3 model is not available. Please try another model.'}) + '\n'
+                    return
+                logger.info("Using Gemma 3 model for response generation")
+                response = gemma_3_model.generate_response(messages)
+            elif model_type == 'phi':
+                if not phi_model:
+                    logger.error("Phi model not available")
+                    yield json.dumps({'error': 'Phi model is not available. Please try another model.'}) + '\n'
+                    return
+                logger.info("Using Phi model for response generation")
+                response = phi_model.generate_response(messages)
+            else:
+                logger.error(f"Invalid model type: {model_type}")
+                yield json.dumps({'error': 'Invalid model type'}) + '\n'
+                return
+
+            if response is None:
+                logger.error("Failed to generate response")
+                yield json.dumps({'error': 'Failed to generate response'}) + '\n'
+                return
+
+            logger.info(f"\n{'='*50}")
+            logger.info("Model Response:")
+            logger.info(f"Response length: {len(response)} characters")
+            logger.info(f"First 100 characters: {response[:100]}...")
+            logger.info(f"{'='*50}\n")
+
+            # Try to add the response to the buffer
+            if not buffer.add_message('assistant', response):
+                logger.warning("Response would exceed token limit")
+                yield json.dumps({
+                    'error': 'Response would exceed token limit. Please start a new chat.',
+                    'token_count': buffer.get_token_count(),
+                    'max_tokens': buffer.max_tokens
+                }) + '\n'
+                return
+
+            # Print buffer contents after adding model response
+            print_buffer_contents(buffer, current_user.id, "After Adding Model Response")
+
+            # Save chat history
+            if chat_id:
+                chat = Chat.query.get(chat_id)
+                if chat:
+                    logger.info(f"Updating existing chat {chat_id}")
+                    chat.messages.append(Message(content=message, role='user'))
+                    chat.messages.append(Message(content=response, role='assistant'))
+                    db.session.commit()
+            else:
+                # Create new chat
+                logger.info("Creating new chat")
+                chat = Chat(
+                    title=message[:50] + '...' if len(message) > 50 else message,
+                    user_id=current_user.id
+                )
                 chat.messages.append(Message(content=message, role='user'))
                 chat.messages.append(Message(content=response, role='assistant'))
+                db.session.add(chat)
                 db.session.commit()
-        else:
-            # Create new chat
-            chat = Chat(
-                title=message[:50] + '...' if len(message) > 50 else message,
-                user_id=current_user.id  # Set the user_id for the new chat
-            )
-            chat.messages.append(Message(content=message, role='user'))
-            chat.messages.append(Message(content=response, role='assistant'))
-            db.session.add(chat)
-            db.session.commit()
-            chat_id = chat.id
+                chat_id = chat.id
+                logger.info(f"Created new chat with ID: {chat_id}")
 
-        return jsonify({
-            'response': response,
-            'chat_id': chat_id
-        })
+            # Stream the response with current token count
+            yield json.dumps({
+                'response': response,
+                'chat_id': chat_id,
+                'token_count': buffer.get_token_count(),
+                'max_tokens': buffer.max_tokens
+            }) + '\n'
+
+        return Response(stream_with_context(generate()), mimetype='application/x-ndjson')
 
     except Exception as e:
-        print(f"Error in chat endpoint: {str(e)}")
+        logger.error(f"Error in chat endpoint: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/chats/<chat_id>/title', methods=['PUT'])

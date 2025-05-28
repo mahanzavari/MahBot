@@ -142,101 +142,134 @@ updateApiKeyInstructions();
 
 // Functions
 async function sendMessage() {
+    const messageInput = document.getElementById('messageInput');
     const message = messageInput.value.trim();
-    if (!message && !currentImage) return;
+    if (!message) return;
 
-    if (!apiKey) {
-        apiKeyModal.classList.add('active');
-        return;
-    }
+    // Disable input and send button while processing
+    messageInput.disabled = true;
+    const sendButton = document.querySelector('.send-button');
+    sendButton.disabled = true;
 
-    if (!currentChatId) {
-        await createNewChat();
-    }
-
-    // Add user message to UI
-    addMessageToUI('user', message);
-    messageInput.value = '';
+    // Show typing indicator
+    const typingIndicator = document.createElement('div');
+    typingIndicator.className = 'message bot-message';
+    typingIndicator.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
+    messagesContainer.appendChild(typingIndicator);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
     try {
-        let response;
-        if (currentImage) {
-            // Handle image upload
-            const formData = new FormData();
-            formData.append('image', currentImage);
-            response = await fetch('/api/upload-image', {
+        // Create new chat if no current chat
+        if (!currentChatId) {
+            const response = await fetch('/api/chats', {
                 method: 'POST',
-                body: formData
+                headers: {
+                    'Content-Type': 'application/json'
+                }
             });
-            const imageData = await response.json();
+            const data = await response.json();
+            currentChatId = data.id;
             
-            if (!response.ok) {
-                throw new Error(imageData.error || 'Failed to upload image');
-            }
-
-            // Send message with image
-            response = await fetch('/api/chat', {
-                method: 'POST',
+            // Update chat title in sidebar
+            const chatTitle = message.length > 30 ? message.substring(0, 30) + '...' : message;
+            await fetch(`/api/chats/${currentChatId}/title`, {
+                method: 'PUT',
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    message: message || 'Image uploaded',
-                    chat_id: currentChatId,
-                    api_key: apiKey,
-                    use_api: true,
-                    api_type: apiType,
-                    image_data: imageData.image_data
-                })
-            });
-        } else {
-            // Send text-only message
-            response = await fetch('/api/chat', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    message: message,
-                    chat_id: currentChatId,
-                    api_key: apiKey,
-                    use_api: true,
-                    api_type: apiType
-                })
+                body: JSON.stringify({ title: chatTitle })
             });
         }
 
-        const data = await response.json();
+        // Send message to server
+        const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                message: message,
+                chat_id: currentChatId,
+                model_type: document.getElementById('modelSelect').value,
+                is_new_chat: false  // Only set to true when explicitly starting a new chat
+            })
+        });
 
-        if (response.ok) {
-            addMessageToUI('bot', data.response);
-            // Clear image preview after successful send
-            if (currentImage) {
-                removeImage();
-            }
-            // Update chat list after successful message
-            await loadChats();
-            
-            // Update the chat title in the sidebar if it's a new chat
-            const chatItem = document.querySelector(`.chat-item[data-id="${currentChatId}"]`);
-            if (chatItem && chatItem.querySelector('.chat-title').textContent === 'New Chat') {
-                // Use first 30 characters of the message as title
-                const title = message.length > 30 ? message.substring(0, 30) + '...' : message;
-                await fetch(`/api/chats/${currentChatId}/title`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ title: title })
-                });
-                await loadChats(); // Reload to show updated title
-            }
-        } else {
-            addMessageToUI('bot', `Error: ${data.error}`);
+        // Remove typing indicator
+        messagesContainer.removeChild(typingIndicator);
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to send message');
         }
+
+        // Handle streaming response
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let botMessage = '';
+        let botMessageElement = null;
+
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n');
+
+            for (const line of lines) {
+                if (!line) continue;
+                try {
+                    const data = JSON.parse(line);
+                    
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+
+                    if (data.response) {
+                        if (!botMessageElement) {
+                            botMessageElement = document.createElement('div');
+                            botMessageElement.className = 'message bot-message';
+                            messagesContainer.appendChild(botMessageElement);
+                        }
+                        botMessage += data.response;
+                        botMessageElement.innerHTML = marked.parse(botMessage);
+                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    }
+
+                    if (data.token_count !== undefined) {
+                        const tokenCount = document.getElementById('tokenCount');
+                        if (tokenCount) {
+                            tokenCount.textContent = `Tokens: ${data.token_count}/${data.max_tokens}`;
+                        }
+                    }
+
+                    if (data.chat_id) {
+                        currentChatId = data.chat_id;
+                    }
+                } catch (e) {
+                    console.error('Error parsing response:', e);
+                }
+            }
+        }
+
+        // Clear input and image preview
+        messageInput.value = '';
+        const imagePreview = document.getElementById('imagePreview');
+        if (imagePreview) {
+            imagePreview.style.display = 'none';
+        }
+
+        // Update chat list
+        await loadChats();
+
     } catch (error) {
-        addMessageToUI('bot', `Error: ${error.message || 'Failed to send message'}`);
         console.error('Error:', error);
+        alert(error.message);
+    } finally {
+        // Re-enable input and send button
+        messageInput.disabled = false;
+        sendButton.disabled = false;
+        messageInput.focus();
     }
 }
 
@@ -494,4 +527,30 @@ if (savedTheme === 'dark') {
 messageInput.addEventListener('input', function() {
     this.style.height = 'auto';
     this.style.height = (this.scrollHeight) + 'px';
-}); 
+});
+
+// Add function to handle new chat button click
+function startNewChat() {
+    currentChatId = null;
+    messagesContainer.innerHTML = '';
+    const tokenCount = document.getElementById('tokenCount');
+    if (tokenCount) {
+        tokenCount.textContent = 'Tokens: 0/64000';
+    }
+    
+    // Send a message to clear the buffer
+    fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            message: 'Starting new chat',
+            chat_id: null,
+            model_type: document.getElementById('modelSelect').value,
+            is_new_chat: true  // Set to true when starting a new chat
+        })
+    }).catch(error => {
+        console.error('Error starting new chat:', error);
+    });
+} 

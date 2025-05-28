@@ -22,34 +22,40 @@ class Gemma3Model:
             print(f"Error loading Gemma 3 4B IT Q6_K model: {str(e)}")
             raise
 
-    def generate_response(self, prompt: str, max_length: int = 2048) -> Optional[str]:
+    def generate_response(self, messages: list, max_length: int = 2048) -> Optional[str]:
         """Generate a response using the Gemma 3 4B IT Q6_K model."""
         try:
             if not self.model:
                 raise ValueError("Model not loaded")
 
-            # Format the prompt
-            formatted_prompt = f"<bos>You are a helpful AI assistant. Please provide a clear and concise response to the following:\n{prompt}\n<eos>"
-
+            # Format the conversation history using the buffer's formatting method
+            from chat_buffer import ChatBuffer
+            buffer = ChatBuffer()
+            for msg in messages:
+                buffer.add_message(msg['role'], msg['content'])
+            formatted_prompt = buffer.format_for_gemma3()
+            print(formatted_prompt)
             # Generate response
             response = self.model(
                 formatted_prompt,
                 max_tokens=max_length,
                 temperature=0.7,
                 top_p=0.9,
-                stop=["<eos>", "<bos>"],
+                stop=["<|end|>", "<|user|>"],
                 echo=False
             )
 
             # Extract and clean the response
             if response and 'choices' in response and len(response['choices']) > 0:
                 generated_text = response['choices'][0]['text'].strip()
+                # Clean up any remaining markers
+                generated_text = generated_text.replace("<|user|>", "").replace("<|assistant|>", "").replace("<|end|>", "").strip()
                 return generated_text
             else:
                 return None
 
         except Exception as e:
-            print(f"Error generating response with Gemma 3 4B IT Q6_K: {str(e)}")
+            print(f"Error generating response: {str(e)}")
             return None
 
     def __del__(self):

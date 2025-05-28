@@ -5,75 +5,134 @@ let useApi = true; // Always use API
 let apiType = localStorage.getItem('apiType') || 'openai';
 
 // DOM Elements
-const messageInput = document.getElementById('messageInput');
-const sendBtn = document.getElementById('sendBtn');
-const uploadBtn = document.getElementById('uploadBtn');
-const imagePreview = document.getElementById('imagePreview');
-const messagesContainer = document.querySelector('.messages');
-const chatList = document.getElementById('chatList');
-const newChatBtn = document.getElementById('newChatBtn');
-const chatSearch = document.getElementById('chatSearch');
-const themeToggle = document.getElementById('themeToggle');
-const apiKeyInput = document.getElementById('apiKeyInput');
-const apiTypeSelect = document.getElementById('apiType');
-const apiKeyModal = document.getElementById('apiKeyModal');
-const apiKeyInstructions = document.getElementById('apiKeyInstructions');
-const saveApiKeyBtn = document.getElementById('saveApiKey');
-const cancelApiKeyBtn = document.getElementById('cancelApiKey');
-const imageUpload = document.getElementById('imageUpload');
+let messageInput;
+let sendBtn;
+let uploadBtn;
+let imagePreview;
+let messagesContainer;
+let chatList;
+let newChatBtn;
+let chatSearch;
+let themeToggle;
+let apiKeyInput;
+let apiTypeSelect;
+let apiKeyModal;
+let apiKeyInstructions;
+let saveApiKeyBtn;
+let cancelApiKeyBtn;
+let imageUpload;
 let currentImage = null;
 let allChats = []; // Store all chats for filtering
 
+// Initialize DOM elements
+function initializeDOMElements() {
+    messageInput = document.getElementById('messageInput');
+    sendBtn = document.getElementById('sendBtn');
+    uploadBtn = document.getElementById('uploadBtn');
+    imagePreview = document.getElementById('imagePreview');
+    messagesContainer = document.querySelector('.messages');
+    chatList = document.getElementById('chatList');
+    newChatBtn = document.getElementById('newChatBtn');
+    chatSearch = document.getElementById('chatSearch');
+    themeToggle = document.getElementById('themeToggle');
+    apiKeyInput = document.getElementById('apiKeyInput');
+    apiTypeSelect = document.getElementById('apiType');
+    apiKeyModal = document.getElementById('apiKeyModal');
+    apiKeyInstructions = document.getElementById('apiKeyInstructions');
+    saveApiKeyBtn = document.getElementById('saveApiKey');
+    cancelApiKeyBtn = document.getElementById('cancelApiKey');
+    imageUpload = document.getElementById('imageUpload');
+}
+
 // Event Listeners
 document.addEventListener('DOMContentLoaded', () => {
+    initializeDOMElements();
     loadChats();
     setupEventListeners();
     // Show API key modal if no key is set
-    if (!apiKey) {
+    if (apiKeyModal && !apiKey) {
         apiKeyModal.classList.add('active');
     }
 });
 
 function setupEventListeners() {
-    sendBtn.addEventListener('click', sendMessage);
-    messageInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendMessage();
-        }
-    });
-    uploadBtn.addEventListener('click', () => document.getElementById('imageInput').click());
-    document.getElementById('imageInput').addEventListener('change', handleImageUpload);
-    newChatBtn.addEventListener('click', createNewChat);
-    chatSearch.addEventListener('input', filterChats);
-    themeToggle.addEventListener('click', toggleTheme);
-    apiTypeSelect.addEventListener('change', handleApiTypeChange);
-    saveApiKeyBtn.addEventListener('click', saveApiKey);
-    cancelApiKeyBtn.addEventListener('click', () => {
-        apiKeyModal.classList.remove('active');
-        apiKeyInput.value = ''; // Clear the input when canceling
-        if (!apiKey) {
-            // If no API key is set, show the modal again after a short delay
-            setTimeout(() => {
-                apiKeyModal.classList.add('active');
-            }, 100);
-        }
-    });
-    imageUpload.addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                imagePreview.innerHTML = `
-                    <img src="${e.target.result}" alt="Preview">
-                    <button class="remove-image" onclick="removeImage()">×</button>
-                `;
-                imagePreview.style.display = 'block';
-                currentImage = file;
-            };
-            reader.readAsDataURL(file);
-        }
-    });
+    if (sendBtn) {
+        sendBtn.addEventListener('click', sendMessage);
+    }
+    
+    if (messageInput) {
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    }
+
+    if (uploadBtn) {
+        uploadBtn.addEventListener('click', () => {
+            const imageInput = document.getElementById('imageInput');
+            if (imageInput) imageInput.click();
+        });
+    }
+
+    const imageInput = document.getElementById('imageInput');
+    if (imageInput) {
+        imageInput.addEventListener('change', handleImageUpload);
+    }
+
+    if (newChatBtn) {
+        newChatBtn.addEventListener('click', createNewChat);
+    }
+
+    if (chatSearch) {
+        chatSearch.addEventListener('input', filterChats);
+    }
+
+    if (themeToggle) {
+        themeToggle.addEventListener('click', toggleTheme);
+    }
+
+    if (apiTypeSelect) {
+        apiTypeSelect.addEventListener('change', handleApiTypeChange);
+    }
+
+    if (saveApiKeyBtn) {
+        saveApiKeyBtn.addEventListener('click', saveApiKey);
+    }
+
+    if (cancelApiKeyBtn) {
+        cancelApiKeyBtn.addEventListener('click', () => {
+            if (apiKeyModal) {
+                apiKeyModal.classList.remove('active');
+                if (apiKeyInput) apiKeyInput.value = ''; // Clear the input when canceling
+                if (!apiKey) {
+                    // If no API key is set, show the modal again after a short delay
+                    setTimeout(() => {
+                        apiKeyModal.classList.add('active');
+                    }, 100);
+                }
+            }
+        });
+    }
+
+    if (imageUpload) {
+        imageUpload.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file && imagePreview) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    imagePreview.innerHTML = `
+                        <img src="${e.target.result}" alt="Preview">
+                        <button class="remove-image" onclick="removeImage()">×</button>
+                    `;
+                    imagePreview.style.display = 'block';
+                    currentImage = file;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
 }
 
 // Initialize
@@ -203,31 +262,39 @@ async function createNewChat() {
             }
         });
         
+        const data = await response.json();
+        
         if (!response.ok) {
-            throw new Error('Failed to create new chat');
+            throw new Error(data.error || 'Failed to create new chat');
         }
         
-        const data = await response.json();
         currentChatId = data.id;
         
         // Clear messages container
-        messagesContainer.innerHTML = '';
+        if (messagesContainer) {
+            messagesContainer.innerHTML = '';
+        }
         
         // Add new chat to allChats array
         allChats.unshift({
             id: data.id,
-            title: 'New Chat',
-            created_at: new Date().toISOString()
+            title: data.title,
+            created_at: data.created_at
         });
         
         // Update sidebar
         await loadChats();
         
         // Focus on message input
-        messageInput.focus();
+        if (messageInput) {
+            messageInput.focus();
+        }
+
+        return data.id;
     } catch (error) {
         console.error('Error creating new chat:', error);
-        alert('Failed to create new chat. Please try again.');
+        alert(`Failed to create new chat: ${error.message}`);
+        throw error; // Re-throw to let caller handle the error
     }
 }
 

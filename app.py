@@ -17,6 +17,7 @@ from auth import auth
 from utils import send_verification_email
 from phi_model import PhiModel
 from gemma_model import GemmaModel
+from gemma_3_model import Gemma3Model
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -42,6 +43,12 @@ try:
 except Exception as e:
     print(f"Warning: Failed to load Gemma model: {str(e)}")
     gemma_model = None
+
+try:
+    gemma_3_model = Gemma3Model()
+except Exception as e:
+    print(f"Warning: Failed to load Gemma 3 model: {str(e)}")
+    gemma_3_model = None
 
 # Register blueprints
 app.register_blueprint(auth)
@@ -102,64 +109,59 @@ def get_gemini_response(messages, api_key):
 def chat():
     try:
         data = request.get_json()
-        message = data.get('message', '').strip()
+        message = data.get('message')
         chat_id = data.get('chat_id')
-        model_type = data.get('model_type', 'gemma')  # Default to Gemma model
+        model_type = data.get('model_type', 'gemma')  # Default to gemma if not specified
         api_key = data.get('api_key')
 
         if not message:
-            return jsonify({'error': 'Message cannot be empty'}), 400
+            return jsonify({'error': 'No message provided'}), 400
 
-        # Get or create chat
-        chat = Chat.query.filter_by(id=chat_id, user_id=current_user.id).first()
-        if not chat:
-            chat = Chat(id=chat_id, user_id=current_user.id, title='New Chat')
-            db.session.add(chat)
-            db.session.commit()
-
-        # Save user message
-        user_message = Message(
-            chat_id=chat.id,
-            role='user',
-            content=message
-        )
-        db.session.add(user_message)
-
-        # Get chat history
-        chat_history = Message.query.filter_by(chat_id=chat.id).order_by(Message.timestamp).all()
-        messages = [{'role': msg.role, 'content': msg.content} for msg in chat_history]
-
-        # Process with selected model
+        # Select model based on model_type
         if model_type == 'gemma':
             if not gemma_model:
                 return jsonify({'error': 'Gemma model is not available. Please try another model.'}), 503
             response = gemma_model.generate_response(message)
+        elif model_type == 'gemma-3-4b-it-q6_k':
+            if not gemma_3_model:
+                return jsonify({'error': 'Gemma 3 model is not available. Please try another model.'}), 503
+            response = gemma_3_model.generate_response(message)
         elif model_type == 'phi':
             if not phi_model:
                 return jsonify({'error': 'Phi model is not available. Please try another model.'}), 503
             response = phi_model.generate_response(message)
-        elif model_type == 'openai':
-            if not api_key:
-                return jsonify({'error': 'API key is required for OpenAI'}), 400
-            response = get_openai_response(messages, api_key)
-        else:  # gemini
-            if not api_key:
-                return jsonify({'error': 'API key is required for Gemini'}), 400
-            response = get_gemini_response(messages, api_key)
+        else:
+            return jsonify({'error': 'Invalid model type'}), 400
 
-        # Save bot response
-        bot_message = Message(
-            chat_id=chat.id,
-            role='bot',
-            content=response
-        )
-        db.session.add(bot_message)
-        db.session.commit()
+        if response is None:
+            return jsonify({'error': 'Failed to generate response'}), 500
 
-        return jsonify({'response': response})
+        # Save chat history
+        if chat_id:
+            chat = Chat.query.get(chat_id)
+            if chat:
+                chat.messages.append(Message(content=message, role='user'))
+                chat.messages.append(Message(content=response, role='assistant'))
+                db.session.commit()
+        else:
+            # Create new chat
+            chat = Chat(
+                title=message[:50] + '...' if len(message) > 50 else message,
+                user_id=current_user.id  # Set the user_id for the new chat
+            )
+            chat.messages.append(Message(content=message, role='user'))
+            chat.messages.append(Message(content=response, role='assistant'))
+            db.session.add(chat)
+            db.session.commit()
+            chat_id = chat.id
+
+        return jsonify({
+            'response': response,
+            'chat_id': chat_id
+        })
 
     except Exception as e:
-        db.session.rollback()
+        print(f"Error in chat endpoint: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/chats/<chat_id>/title', methods=['PUT'])
@@ -280,6 +282,28 @@ def clear_chats():
         return jsonify({'message': 'Chat history cleared successfully'})
     except Exception as e:
         db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/chats', methods=['POST'])
+@login_required
+def create_chat():
+    try:
+        # Create new chat
+        chat = Chat(
+            title='New Chat',
+            user_id=current_user.id
+        )
+        db.session.add(chat)
+        db.session.commit()
+        
+        return jsonify({
+            'id': chat.id,
+            'title': chat.title,
+            'created_at': chat.created_at.isoformat()
+        })
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error creating chat: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':

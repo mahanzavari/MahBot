@@ -218,6 +218,27 @@ def get_chats():
     
     return jsonify(grouped_chats)
 
+@app.route('/api/chats', methods=['POST'])
+@login_required
+def create_chat():
+    try:
+        # Create new chat
+        chat = Chat(
+            title='New Chat',
+            user_id=current_user.id
+        )
+        db.session.add(chat)
+        db.session.commit()
+        
+        return jsonify({
+            'id': chat.id,
+            'title': chat.title,
+            'created_at': chat.created_at.isoformat()
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/chats/<chat_id>', methods=['GET'])
 @login_required
 def get_chat(chat_id):
@@ -282,28 +303,6 @@ def clear_chats():
         return jsonify({'message': 'Chat history cleared successfully'})
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/chats', methods=['POST'])
-@login_required
-def create_chat():
-    try:
-        # Create new chat
-        chat = Chat(
-            title='New Chat',
-            user_id=current_user.id
-        )
-        db.session.add(chat)
-        db.session.commit()
-        
-        return jsonify({
-            'id': chat.id,
-            'title': chat.title,
-            'created_at': chat.created_at.isoformat()
-        })
-    except Exception as e:
-        db.session.rollback()
-        print(f"Error creating chat: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':

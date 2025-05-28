@@ -7,7 +7,7 @@ class Config:
     
     # Database configuration
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-        'postgresql://postgres:13831377@localhost:5432/legalqa_chatbot'
+        'postgresql://postgres:13831377@localhost:5432/MahBot_db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # Session configuration
@@ -17,9 +17,6 @@ class Config:
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
     UPLOAD_FOLDER = 'uploads'
     
-    # API settings
-    OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
-    GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
 
     # Email configuration
     MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')

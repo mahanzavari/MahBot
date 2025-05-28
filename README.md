@@ -1,38 +1,73 @@
-# AI Chatbot
+# Lysander - Legal AI Assistant
 
-A modern web-based chatbot application that supports both local and API-based responses, with features for chat history management and image uploads.
+A modern web-based legal chatbot application that leverages multiple AI models to provide intelligent legal assistance. The application supports both local and cloud-based AI models, with features for chat history management, image analysis, and a beautiful, responsive user interface.
 
 ## Features
 
-- Switch between local and API-based responses
-- Chat history management
-- Image upload support
-- Context window management
-- Modern, responsive UI
-- Real-time message updates
+- Multiple AI Model Support:
+  - GEMMA Models:
+    - Gemma 2B
+    - Gemma 3 4B IT Q6_K
+  - PHI Models:
+    - Phi-3
+- User Authentication System
+- Chat History Management
+- Image Upload and Analysis (coming soon, **not implemented**)
+- Modern, Responsive UI with Dark/Light Mode
+- Real-time Message Updates
+- Secure API Key Management
 
 ## Prerequisites
 
-- Python 3.7 or higher
+- Python 3.8 or higher
 - pip (Python package manager)
+- PostgreSQL Database
+- Git
 
 ## Installation
 
 1. Clone the repository:
 ```bash
 git clone <repository-url>
-cd <repository-name>
+cd LegalQA-chatbot
 ```
 
-2. Create a virtual environment (recommended):
+2. Create a virtual environment:
 ```bash
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+# On Windows:
+venv\Scripts\activate
+# On Unix or MacOS:
+source venv/bin/activate
 ```
 
 3. Install dependencies:
 ```bash
 pip install -r requirements.txt
+```
+
+4. Set up the database:
+```bash
+# Create PostgreSQL database
+createdb MahBot_db
+
+# Initialize database migrations
+flask db init
+flask db migrate -m "Initial migration"
+flask db upgrade
+```
+
+5. Configure environment variables:
+Create a `.env` file in the root directory with the following variables:
+```
+SECRET_KEY=your-secret-key
+DATABASE_URL=postgresql://postgres:your-password@localhost:5432/MahBot_db
+MAIL_SERVER=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USE_TLS=True
+MAIL_USERNAME=your-email@gmail.com
+MAIL_PASSWORD=your-app-password
+MAIL_DEFAULT_SENDER=your-email@gmail.com
 ```
 
 ## Usage
@@ -48,22 +83,31 @@ http://localhost:5000
 ```
 
 3. Using the Chatbot:
+   - Register/Login to your account
+   - Select your preferred AI model from the dropdown
    - Click "New Chat" to start a new conversation
-   - Toggle between local and API mode using the switch
-   - If using API mode, you'll be prompted to enter your API key
-   - Type messages in the input box and press Enter or click Send
-   - Upload images using the image upload button
-   - View chat history in the sidebar
+   - Type your legal questions in the input box
+   - Upload relevant documents/images using the upload button
+   - View and manage your chat history in the sidebar
+   - Toggle between dark and light themes using the theme button
 
-## API Mode
+## Model Information
 
-When using API mode, you'll need to provide an API key. The application currently supports the OpenAI API. Your API key is stored locally in your browser and is never sent to any server other than the API provider.
+### GEMMA Models
+- **Gemma 2B**: A lightweight model suitable for quick responses
+- **Gemma 3 4B IT Q6_K**: A more powerful model with improved performance
+
+### PHI Models
+- **Phi-3**: Microsoft's latest model optimized for legal and technical content
 
 ## Project Structure
 
 ```
 .
 ├── app.py              # Flask backend
+├── models.py           # Database models
+├── config.py           # Configuration settings
+├── auth.py            # Authentication routes
 ├── requirements.txt    # Python dependencies
 ├── static/
 │   ├── css/
@@ -74,12 +118,30 @@ When using API mode, you'll need to provide an API key. The application currentl
     └── index.html     # Main HTML template
 ```
 
-## Security Notes
+## Security Features
 
-- API keys are stored in the browser's localStorage
-- All API communications are done directly from the frontend to the API provider
-- The backend server does not store or process API keys
+- Secure user authentication
+- Password hashing
+- Email verification system
+- API key management
+- Session management
+- CSRF protection
 
 ## Contributing
 
-Feel free to submit issues and enhancement requests! 
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgments
+
+- Flask and its extensions
+- PostgreSQL
+- The AI model providers (Google, Microsoft)
+- All contributors and users of the project 

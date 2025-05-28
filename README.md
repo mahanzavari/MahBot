@@ -1,4 +1,4 @@
-# Lysander - Legal AI Assistant
+# Calliope  - Legal AI Assistant
 
 A modern web-based legal chatbot application that leverages multiple AI models to provide intelligent legal assistance. The application supports both local and cloud-based AI models, with features for chat history management, image analysis, and a beautiful, responsive user interface.
 
@@ -77,10 +77,84 @@ MAIL_DEFAULT_SENDER=your-email@gmail.com
 python app.py
 ```
 
-2. Open your web browser and navigate to:
+2. Access the Chatbot:
+
+### Local Access
+Open your web browser and navigate to:
 ```
 http://localhost:5000
 ```
+
+### Same Network Access
+To access the chatbot from other devices on the same network (like your phone):
+
+1. Find your computer's local IP address:
+   ```bash
+   # On Windows:
+   ipconfig
+   # Look for "IPv4 Address" under your active network adapter
+   
+   # On Mac/Linux:
+   ifconfig
+   # or
+   ip addr
+   # Look for "inet" followed by your IP address
+   ```
+
+2. Start the Flask server with host parameter:
+   ```bash
+   python app.py --host=0.0.0.0
+   ```
+
+3. On your mobile device, open a web browser and enter:
+   ```
+   http://YOUR_COMPUTER_IP:5000
+   ```
+   Replace YOUR_COMPUTER_IP with the IP address you found in step 1.
+
+Note: Make sure your computer's firewall allows incoming connections on port 5000.
+
+### Internet Access (Development/Testing)
+To access the chatbot from other devices (like your phone) during development:
+
+1. Install ngrok:
+```bash
+# Using pip
+pip install pyngrok
+
+# Or download from https://ngrok.com/download
+```
+
+2. Start ngrok to create a tunnel:
+```bash
+ngrok http 5000
+```
+
+3. Use the provided ngrok URL (e.g., `https://xxxx-xx-xx-xxx-xx.ngrok.io`) to access your chatbot from any device.
+
+### Production Deployment
+For production deployment, you have several options:
+
+1. **Cloud Platforms**:
+   - Heroku
+   - Google Cloud Platform
+   - AWS
+   - DigitalOcean
+   - Azure
+
+2. **VPS (Virtual Private Server)**:
+   - Set up a VPS with providers like DigitalOcean, Linode, or Vultr
+   - Configure a domain name
+   - Set up SSL certificates
+   - Use a production-grade WSGI server like Gunicorn
+   - Use Nginx as a reverse proxy
+
+3. **Docker Deployment**:
+   - Containerize the application
+   - Deploy using Docker Compose
+   - Use container orchestration services
+
+For detailed deployment instructions, please refer to the deployment documentation in the `docs` folder.
 
 3. Using the Chatbot:
    - Register/Login to your account

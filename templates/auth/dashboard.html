@@ -2,15 +2,183 @@
 <html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - AI Chatbot</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="format-detection" content="telephone=no">
+    <title>Dashboard - Calliope</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Mobile Responsive Styles for Dashboard */
+        @media screen and (max-width: 768px) {
+            .dashboard-container {
+                flex-direction: column;
+            }
+
+            .dashboard-sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+                padding: 1rem;
+            }
+
+            .user-profile {
+                margin-bottom: 1rem;
+            }
+
+            .profile-avatar {
+                width: 60px;
+                height: 60px;
+                font-size: 1.5rem;
+            }
+
+            .dashboard-nav {
+                flex-direction: row;
+                overflow-x: auto;
+                padding-bottom: 0.5rem;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .nav-item {
+                flex-shrink: 0;
+                white-space: nowrap;
+            }
+
+            .dashboard-content {
+                padding: 1rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .stat-card {
+                padding: 1rem;
+            }
+
+            .stat-value {
+                font-size: 1.5rem;
+            }
+
+            .activity-chart {
+                height: 200px;
+            }
+
+            .recent-chats {
+                grid-template-columns: 1fr;
+            }
+
+            .chat-card {
+                padding: 0.75rem;
+            }
+
+            .modal-content {
+                width: 90%;
+                margin: 1rem;
+                padding: 1rem;
+            }
+
+            .form-group input {
+                font-size: 16px;
+            }
+
+            .btn {
+                min-height: 44px;
+            }
+        }
+
+        @media screen and (max-width: 480px) {
+            .dashboard-sidebar {
+                padding: 0.75rem;
+            }
+
+            .profile-avatar {
+                width: 50px;
+                height: 50px;
+                font-size: 1.25rem;
+            }
+
+            .user-profile h2 {
+                font-size: 1.1rem;
+            }
+
+            .user-email {
+                font-size: 0.9rem;
+            }
+
+            .member-since {
+                font-size: 0.8rem;
+            }
+
+            .nav-item {
+                padding: 0.5rem 0.75rem;
+                font-size: 0.9rem;
+            }
+
+            .stat-card h3 {
+                font-size: 0.8rem;
+            }
+
+            .stat-value {
+                font-size: 1.25rem;
+            }
+
+            .dashboard-section h2 {
+                font-size: 1.1rem;
+            }
+
+            .chat-card h3 {
+                font-size: 0.9rem;
+            }
+
+            .chat-date,
+            .chat-messages {
+                font-size: 0.8rem;
+            }
+        }
+
+        @supports (padding: max(0px)) {
+            .dashboard-container {
+                padding-left: max(1rem, env(safe-area-inset-left));
+                padding-right: max(1rem, env(safe-area-inset-right));
+            }
+
+            .dashboard-content {
+                padding-bottom: max(1rem, env(safe-area-inset-bottom));
+            }
+        }
+
+        @media (hover: none) {
+            .nav-item:active,
+            .btn:active {
+                opacity: 0.7;
+            }
+        }
+
+        html {
+            -webkit-text-size-adjust: 100%;
+        }
+
+        .dashboard-content,
+        .dashboard-nav {
+            -webkit-overflow-scrolling: touch;
+        }
+    </style>
 </head>
 <body>
     <div class="top-bar">
-        <h1>Dashboard</h1>
+        <div class="top-bar-left">
+            <button id="sidebarToggle" class="sidebar-toggle" title="Toggle Sidebar">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+                    <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+                </svg>
+            </button>
+            <h1>Dashboard</h1>
+        </div>
         <div class="top-bar-controls">
             <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">
                 <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="display: none;">
@@ -33,7 +201,7 @@
             <div class="user-profile">
                 <div class="profile-avatar">
                     {% if user.avatar_url %}
-                        <img src="{{ user.avatar_url }}" alt="Avatar" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover;">
+                        <img src="{{ user.avatar_url }}" alt="Avatar" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
                     {% else %}
                         {{ user.username[0].upper() }}
                     {% endif %}
@@ -56,13 +224,13 @@
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
                         <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
                     </svg>
-                    Chat
+                    <span>Chat</span>
                 </a>
                 <a href="{{ url_for('auth.dashboard') }}" class="nav-item active">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
                         <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
                     </svg>
-                    Dashboard
+                    <span>Dashboard</span>
                 </a>
             </nav>
         </div>
@@ -102,7 +270,7 @@
     </div>
 
     <div id="profileModal" class="modal">
-        <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-content">
             <h2>Edit Profile</h2>
             <form id="profileForm">
                 <div class="form-group">
@@ -127,7 +295,7 @@
     </div>
 
     <div id="signOutModal" class="modal">
-        <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-content">
             <h2>Sign Out</h2>
             <p>Are you sure you want to sign out?</p>
             <div class="modal-buttons">
@@ -198,6 +366,7 @@
                 },
                 options: {
                     responsive: true,
+                    maintainAspectRatio: false,
                     scales: {
                         y: {
                             beginAtZero: true,
@@ -208,6 +377,16 @@
                     }
                 }
             });
+
+            // Handle sidebar toggle
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const dashboardSidebar = document.querySelector('.dashboard-sidebar');
+            
+            if (sidebarToggle && dashboardSidebar) {
+                sidebarToggle.addEventListener('click', () => {
+                    dashboardSidebar.classList.toggle('active');
+                });
+            }
         });
 
         // Sign out function
@@ -242,9 +421,11 @@
         function openProfileModal() {
             document.getElementById('profileModal').classList.add('active');
         }
+
         function closeProfileModal() {
             document.getElementById('profileModal').classList.remove('active');
         }
+
         // Avatar preview
         document.getElementById('avatarUpload').addEventListener('change', function(e) {
             const file = e.target.files[0];
@@ -256,6 +437,7 @@
                 reader.readAsDataURL(file);
             }
         });
+
         // Profile form submit
         document.getElementById('profileForm').addEventListener('submit', function(e) {
             e.preventDefault();

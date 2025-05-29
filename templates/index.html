@@ -111,7 +111,17 @@
                             </svg>
                         </label>
                         <input type="file" id="imageUpload" accept="image/*" style="display: none;">
-                        <textarea id="messageInput" placeholder="Type your message..." rows="1"></textarea>
+
+                        <button id="searchToggleBtn" class="upload-btn" title="Toggle web search">
+                            <svg class="search-icon" viewBox="0 0 24 24" fill="currentColor" width="24px" height="24px">
+                                <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 5L20.49 19l-5-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                            </svg>
+                            <div class="search-indicator" style="display: none;">
+                                <div class="search-dot"></div>
+                            </div>
+                        </button>
+
+                        <textarea id="messageInput" placeholder="Type your message or search query..." rows="1"></textarea>
                         <button id="sendBtn">
                             <svg viewBox="0 0 24 24">
                                 <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
@@ -1157,7 +1167,7 @@
     .input-wrapper {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: 0.75rem;  /* Increased gap between elements */
         background-color: var(--background-color);
         border: 1px solid var(--border-color);
         border-radius: 0.75rem;
@@ -1176,6 +1186,7 @@
         }
         
         .input-wrapper {
+            gap: 0.5rem;  /* Reduced gap for mobile */
             padding: 0.5rem;
         }
     }
@@ -1196,10 +1207,30 @@
         border: 1px solid var(--border-color);
     }
 
+    .search-enhanced .message-content {
+        background-color: var(--bg-secondary);
+        border-left: 4px solid var(--primary-color);
+        padding-left: 1.5rem;
+    }
+
+    .search-enhanced .message-content::before {
+        content: '🔍';
+        position: absolute;
+        left: 0.5rem;
+        top: 0.5rem;
+        font-size: 1rem;
+        opacity: 0.7;
+    }
+
     [data-theme="dark"] .bot-message .message-content {
         background-color: var(--bg-secondary-dark);
         color: var(--text-color);
         border-color: var(--border-color-dark);
+    }
+
+    [data-theme="dark"] .search-enhanced .message-content {
+        background-color: var(--bg-secondary-dark);
+        border-left-color: var(--primary-color);
     }
 
     .message-time {
@@ -1323,6 +1354,113 @@
         .token-count {
             font-size: 0.7rem;
             padding: 0.25rem;
+        }
+    }
+
+    /* Add styles for the search button */
+    .upload-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 50%;
+        transition: background-color 0.3s;
+        position: relative;
+        margin-right: 0.25rem;  /* Added margin to separate buttons */
+    }
+
+    /* Add a divider between buttons */
+    .upload-btn::after {
+        content: '';
+        position: absolute;
+        right: -0.5rem;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 1px;
+        height: 24px;
+        background-color: var(--border-color);
+        opacity: 0.5;
+    }
+
+    .upload-btn:hover {
+        background-color: rgba(0, 0, 0, 0.1);
+    }
+
+    .upload-btn svg {
+        width: 24px;
+        height: 24px;
+        fill: currentColor;
+    }
+
+    .search-icon {
+        transition: transform 0.3s ease;
+    }
+
+    .search-toggle-active .search-icon {
+        transform: scale(1.1);
+        color: var(--primary-color);
+    }
+
+    .search-indicator {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: var(--primary-color);
+        animation: pulse 2s infinite;
+    }
+
+    .search-dot {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background-color: var(--primary-color);
+    }
+
+    @keyframes pulse {
+        0% {
+            transform: scale(1);
+            opacity: 1;
+        }
+        50% {
+            transform: scale(1.2);
+            opacity: 0.7;
+        }
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+
+    /* Dark theme support */
+    .dark-theme .upload-btn:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Mobile responsiveness */
+    @media (max-width: 768px) {
+        .input-wrapper {
+            gap: 0.5rem;  /* Reduced gap for mobile */
+            padding: 0.5rem;
+        }
+
+        .upload-btn {
+            padding: 6px;
+        }
+        
+        .upload-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .upload-btn::after {
+            height: 20px;  /* Adjusted divider height for mobile */
+            right: -0.35rem;
         }
     }
     </style>

@@ -3,6 +3,7 @@ let currentChatId = null;
 let apiKey = localStorage.getItem('apiKey') || '';
 let useApi = true; // Always use API
 let apiType = localStorage.getItem('apiType') || 'openai';
+let searchModeEnabled = localStorage.getItem('searchModeEnabled') === 'true';
 
 // DOM Elements
 let messageInput;
@@ -23,6 +24,7 @@ let cancelApiKeyBtn;
 let imageUpload;
 let currentImage = null;
 let allChats = []; // Store all chats for filtering
+let searchToggleBtn;
 
 // Initialize DOM elements
 function initializeDOMElements() {
@@ -42,6 +44,7 @@ function initializeDOMElements() {
     saveApiKeyBtn = document.getElementById('saveApiKey');
     cancelApiKeyBtn = document.getElementById('cancelApiKey');
     imageUpload = document.getElementById('imageUpload');
+    searchToggleBtn = document.getElementById('searchToggleBtn');
 }
 
 // Event Listeners
@@ -49,6 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeDOMElements();
     loadChats();
     setupEventListeners();
+    updateSearchToggleState();
     // Show API key modal if no key is set
     if (apiKeyModal && !apiKey) {
         apiKeyModal.classList.add('active');
@@ -133,6 +137,10 @@ function setupEventListeners() {
             }
         });
     }
+
+    if (searchToggleBtn) {
+        searchToggleBtn.addEventListener('click', toggleSearchMode);
+    }
 }
 
 // Initialize
@@ -191,7 +199,8 @@ async function sendMessage() {
                 message: message,
                 chat_id: currentChatId,
                 model_type: document.getElementById('modelSelect').value,
-                is_new_chat: false  // Only set to true when explicitly starting a new chat
+                is_new_chat: false,
+                use_search: searchModeEnabled
             })
         });
 
@@ -229,6 +238,9 @@ async function sendMessage() {
                         if (!botMessageElement) {
                             botMessageElement = document.createElement('div');
                             botMessageElement.className = 'message bot-message';
+                            if (data.used_search) {
+                                botMessageElement.classList.add('search-enhanced');
+                            }
                             messagesContainer.appendChild(botMessageElement);
                         }
                         botMessage += data.response;
@@ -553,4 +565,103 @@ function startNewChat() {
     }).catch(error => {
         console.error('Error starting new chat:', error);
     });
+}
+
+async function sendSearchQuery() {
+    const messageInput = document.getElementById('messageInput');
+    const query = messageInput.value.trim();
+
+    if (!query) {
+        alert('Please enter a search query.');
+        return;
+    }
+
+    // Disable input and buttons while processing
+    messageInput.disabled = true;
+    searchToggleBtn.disabled = true;
+    sendBtn.disabled = true;
+
+    // Show typing indicator
+    const typingIndicator = document.createElement('div');
+    typingIndicator.className = 'message bot-message';
+    typingIndicator.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
+    messagesContainer.appendChild(typingIndicator);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+    try {
+        // Add user message to UI
+        const userMessageDiv = document.createElement('div');
+        userMessageDiv.className = 'message user-message';
+        userMessageDiv.innerHTML = `<div class="message-content">Searching for: ${query}</div>`;
+        messagesContainer.appendChild(userMessageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+        // Clear input
+        messageInput.value = '';
+
+        const response = await fetch('/api/search', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ query: query }),
+        });
+
+        // Remove typing indicator
+        messagesContainer.removeChild(typingIndicator);
+
+        const data = await response.json();
+
+        if (response.ok) {
+            // Display search results
+            let resultsContent = "Here's what I found:\n\n";
+            data.results.forEach((result, index) => {
+                resultsContent += `${index + 1}. **${result.source_title}**\n`;
+                resultsContent += `   *Snippet:* ${result.snippet}\n`;
+                resultsContent += `   *URL:* [${result.url}](${result.url})\n\n`;
+            });
+
+            const botMessageDiv = document.createElement('div');
+            botMessageDiv.className = 'message bot-message';
+            botMessageDiv.innerHTML = marked.parse(resultsContent);
+            messagesContainer.appendChild(botMessageDiv);
+        } else {
+            const errorMessageDiv = document.createElement('div');
+            errorMessageDiv.className = 'message bot-message';
+            errorMessageDiv.innerHTML = `<div class="message-content">Error: ${data.error || 'Failed to perform search'}</div>`;
+            messagesContainer.appendChild(errorMessageDiv);
+        }
+    } catch (error) {
+        console.error('Error during search:', error);
+        const errorMessageDiv = document.createElement('div');
+        errorMessageDiv.className = 'message bot-message';
+        errorMessageDiv.innerHTML = `<div class="message-content">Error: ${error.message || 'Failed to perform search'}</div>`;
+        messagesContainer.appendChild(errorMessageDiv);
+    } finally {
+        // Re-enable input and buttons
+        messageInput.disabled = false;
+        searchToggleBtn.disabled = false;
+        sendBtn.disabled = false;
+        messageInput.focus();
+    }
+}
+
+function toggleSearchMode() {
+    searchModeEnabled = !searchModeEnabled;
+    localStorage.setItem('searchModeEnabled', searchModeEnabled);
+    updateSearchToggleState();
+}
+
+function updateSearchToggleState() {
+    if (searchToggleBtn) {
+        if (searchModeEnabled) {
+            searchToggleBtn.classList.add('search-toggle-active');
+            searchToggleBtn.querySelector('.search-indicator').style.display = 'block';
+            messageInput.placeholder = 'Type your message (web search enabled)...';
+        } else {
+            searchToggleBtn.classList.remove('search-toggle-active');
+            searchToggleBtn.querySelector('.search-indicator').style.display = 'none';
+            messageInput.placeholder = 'Type your message...';
+        }
+    }
 } 

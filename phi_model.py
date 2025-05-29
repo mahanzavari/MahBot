@@ -11,7 +11,8 @@ class PhiModel:
             model_path=model_path,
             n_ctx=4096,  # Context window
             n_threads=4,  # Number of CPU threads to use
-            n_gpu_layers=0  # Number of layers to offload to GPU
+            n_gpu_layers=-1# Number of layers to offload to GPU
+            # verbose=False
         )
         
         self.system_prompt = """You are a helpful AI assistant. 

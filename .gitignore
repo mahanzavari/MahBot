@@ -101,4 +101,4 @@ models/*.gguf
 *.db
 
 # Migration files (optional, if you want to ignore them)
-migrations/
+# migrations/

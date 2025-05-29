@@ -20,6 +20,9 @@ from gemma_model import GemmaModel
 from gemma_3_model import Gemma3Model
 from chat_buffer import ChatBuffer
 import logging
+from googlesearch import search as google_search
+from bs4 import BeautifulSoup
+import re
 
 # Configure logging
 logging.basicConfig(
@@ -155,9 +158,10 @@ def chat():
         message = data.get('message')
         chat_id = data.get('chat_id')
         model_type = data.get('model_type', 'gemma')
-        is_new_chat = data.get('is_new_chat', False)  # Add flag for new chat
+        is_new_chat = data.get('is_new_chat', False)
+        use_search = data.get('use_search', False)  # Add search flag
 
-        logger.info(f"Received chat request - User: {current_user.id}, Chat ID: {chat_id}, Model: {model_type}, New Chat: {is_new_chat}")
+        logger.info(f"Received chat request - User: {current_user.id}, Chat ID: {chat_id}, Model: {model_type}, New Chat: {is_new_chat}, Use Search: {use_search}")
         logger.debug(f"Message content: {message}")
 
         if not message:
@@ -216,6 +220,62 @@ def chat():
             logger.info(f"Model type: {model_type}")
             logger.info(f"Number of messages in buffer: {len(messages)}")
             logger.info(f"{'='*50}\n")
+
+            # Perform web search if enabled
+            search_results = []
+            used_search = False
+            if use_search:
+                try:
+                    logger.info("Performing web search...")
+                    search_results = []
+                    for url in google_search(message, num=5):
+                        try:
+                            response = requests.get(url, timeout=5)
+                            if response.status_code == 200:
+                                soup = BeautifulSoup(response.text, 'html.parser')
+                                
+                                # Get title
+                                title = soup.title.string if soup.title else url
+                                
+                                # Get snippet (first paragraph or meta description)
+                                snippet = ''
+                                meta_desc = soup.find('meta', attrs={'name': 'description'})
+                                if meta_desc and meta_desc.get('content'):
+                                    snippet = meta_desc['content']
+                                else:
+                                    # Find first paragraph
+                                    first_p = soup.find('p')
+                                    if first_p:
+                                        snippet = first_p.get_text()
+                                
+                                # Clean up snippet
+                                snippet = re.sub(r'\s+', ' ', snippet).strip()
+                                if len(snippet) > 200:
+                                    snippet = snippet[:197] + '...'
+                                
+                                search_results.append({
+                                    'source_title': title,
+                                    'snippet': snippet,
+                                    'url': url
+                                })
+                        except Exception as e:
+                            logger.error(f"Error processing search result {url}: {str(e)}")
+                            continue
+
+                    if search_results:
+                        used_search = True
+                        # Format search results as context
+                        search_context = "Here are some relevant search results:\n\n"
+                        for i, result in enumerate(search_results, 1):
+                            search_context += f"{i}. {result['source_title']}\n"
+                            search_context += f"   {result['snippet']}\n"
+                            search_context += f"   Source: {result['url']}\n\n"
+                        
+                        # Add search context to the last user message
+                        messages[-1]['content'] = f"{message}\n\n{search_context}"
+                        logger.info("Search results added to context")
+                except Exception as e:
+                    logger.error(f"Error performing search: {str(e)}")
             
             # Select model based on model_type
             if model_type == 'gemma':
@@ -290,12 +350,13 @@ def chat():
                 chat_id = chat.id
                 logger.info(f"Created new chat with ID: {chat_id}")
 
-            # Stream the response with current token count
+            # Stream the response with current token count and search status
             yield json.dumps({
                 'response': response,
                 'chat_id': chat_id,
                 'token_count': buffer.get_token_count(),
-                'max_tokens': buffer.max_tokens
+                'max_tokens': buffer.max_tokens,
+                'used_search': used_search
             }) + '\n'
 
         return Response(stream_with_context(generate()), mimetype='application/x-ndjson')
@@ -443,6 +504,68 @@ def clear_chats():
         return jsonify({'message': 'Chat history cleared successfully'})
     except Exception as e:
         db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/search', methods=['POST'])
+@login_required
+def perform_search():
+    try:
+        data = request.get_json()
+        query = data.get('query')
+
+        if not query:
+            return jsonify({'error': 'No search query provided'}), 400
+
+        # Perform Google search
+        search_results = []
+        try:
+            # Get top 5 search results
+            for url in google_search(query, num=5):
+                try:
+                    # Fetch the webpage content
+                    response = requests.get(url, timeout=5)
+                    if response.status_code == 200:
+                        soup = BeautifulSoup(response.text, 'html.parser')
+                        
+                        # Get title
+                        title = soup.title.string if soup.title else url
+                        
+                        # Get snippet (first paragraph or meta description)
+                        snippet = ''
+                        meta_desc = soup.find('meta', attrs={'name': 'description'})
+                        if meta_desc and meta_desc.get('content'):
+                            snippet = meta_desc['content']
+                        else:
+                            # Find first paragraph
+                            first_p = soup.find('p')
+                            if first_p:
+                                snippet = first_p.get_text()
+                        
+                        # Clean up snippet
+                        snippet = re.sub(r'\s+', ' ', snippet).strip()
+                        if len(snippet) > 200:
+                            snippet = snippet[:197] + '...'
+                        
+                        search_results.append({
+                            'source_title': title,
+                            'snippet': snippet,
+                            'url': url
+                        })
+                except Exception as e:
+                    logger.error(f"Error processing search result {url}: {str(e)}")
+                    continue
+
+            if search_results:
+                return jsonify({'results': search_results})
+            else:
+                return jsonify({'error': 'No results found'}), 404
+
+        except Exception as e:
+            logger.error(f"Search error: {str(e)}")
+            return jsonify({'error': f"Search failed: {str(e)}"}), 500
+
+    except Exception as e:
+        logger.error(f"Error in search endpoint: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':

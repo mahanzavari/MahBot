@@ -17,7 +17,9 @@ class GemmaModel:
                 model_path=model_path,
                 n_ctx=4096,
                 n_threads=4,
-                n_batch=512
+                n_batch=512,
+                n_gpu_layers=-1
+                # verbose=False
             )
             print(f"Successfully loaded Gemma model from {model_path}")
         except Exception as e:

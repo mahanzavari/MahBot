@@ -15,7 +15,8 @@ class Gemma3Model:
                 model_path=self.model_path,
                 n_ctx=2048,  # Context window
                 n_threads=4,  # Number of CPU threads to use
-                n_gpu_layers=-1  # Use GPU for all layers if available
+                n_gpu_layers=-1 # Use GPU for all layers if available
+                # verbose=False
             )
             print(f"Gemma 3 4B IT Q6_K model loaded successfully")
         except Exception as e:

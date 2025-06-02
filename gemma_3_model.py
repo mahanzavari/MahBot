@@ -1,6 +1,10 @@
 import os
 from typing import Optional
 from llama_cpp import Llama
+from utils import check_gpu_availability
+import logging
+
+logger = logging.getLogger(__name__)
 
 class Gemma3Model:
     def __init__(self):
@@ -11,16 +15,19 @@ class Gemma3Model:
     def load_model(self):
         """Load the Gemma 3 4B IT Q6_K model using llama-cpp."""
         try:
+            # Check GPU availability
+            gpu_config = check_gpu_availability()
+            logger.info(f"Initializing Gemma 3 model with GPU config: {gpu_config}")
+            
             self.model = Llama(
                 model_path=self.model_path,
                 n_ctx=2048,  # Context window
                 n_threads=4,  # Number of CPU threads to use
-                n_gpu_layers=-1 # Use GPU for all layers if available
-                # verbose=False
+                n_gpu_layers=gpu_config['n_gpu_layers']  # Use GPU layers based on availability
             )
-            print(f"Gemma 3 4B IT Q6_K model loaded successfully")
+            logger.info(f"Gemma 3 4B IT Q6_K model loaded successfully using {'GPU' if gpu_config['has_gpu'] else 'CPU'}")
         except Exception as e:
-            print(f"Error loading Gemma 3 4B IT Q6_K model: {str(e)}")
+            logger.error(f"Error loading Gemma 3 4B IT Q6_K model: {str(e)}")
             raise
 
     def generate_response(self, messages: list, max_length: int = 2048) -> Optional[str]:

@@ -1,5 +1,9 @@
 from llama_cpp import Llama
 import os
+from utils import check_gpu_availability
+import logging
+
+logger = logging.getLogger(__name__)
 
 class PhiModel:
     def __init__(self):
@@ -7,13 +11,21 @@ class PhiModel:
         if not os.path.exists(model_path):
             raise FileNotFoundError(f"Model file not found at {model_path}. Please download it from Hugging Face.")
         
-        self.llm = Llama(
-            model_path=model_path,
-            n_ctx=4096,  # Context window
-            n_threads=4,  # Number of CPU threads to use
-            n_gpu_layers=-1# Number of layers to offload to GPU
-            # verbose=False
-        )
+        try:
+            # Check GPU availability
+            gpu_config = check_gpu_availability()
+            logger.info(f"Initializing Phi model with GPU config: {gpu_config}")
+            
+            self.llm = Llama(
+                model_path=model_path,
+                n_ctx=4096,  # Context window
+                n_threads=4,  # Number of CPU threads to use
+                n_gpu_layers=gpu_config['n_gpu_layers']  # Use GPU layers based on availability
+            )
+            logger.info(f"Phi model loaded successfully using {'GPU' if gpu_config['has_gpu'] else 'CPU'}")
+        except Exception as e:
+            logger.error(f"Error loading Phi model: {str(e)}")
+            raise
         
         self.system_prompt = """You are a helpful AI assistant. 
         Provide accurate, concise, and helpful responses to legal questions. 

@@ -102,3 +102,4 @@ models/*.gguf
 
 # Migration files (optional, if you want to ignore them)
 # migrations/
+Crawlers/

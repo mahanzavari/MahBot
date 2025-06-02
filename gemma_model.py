@@ -1,5 +1,9 @@
 from llama_cpp import Llama
 import os
+from utils import check_gpu_availability
+import logging
+
+logger = logging.getLogger(__name__)
 
 class GemmaModel:
     def __init__(self):
@@ -13,17 +17,20 @@ class GemmaModel:
             return
         
         try:
+            # Check GPU availability
+            gpu_config = check_gpu_availability()
+            logger.info(f"Initializing Gemma model with GPU config: {gpu_config}")
+            
             self.llm = Llama(
                 model_path=model_path,
                 n_ctx=4096,
                 n_threads=4,
                 n_batch=512,
-                n_gpu_layers=-1
-                # verbose=False
+                n_gpu_layers=gpu_config['n_gpu_layers']
             )
-            print(f"Successfully loaded Gemma model from {model_path}")
+            logger.info(f"Successfully loaded Gemma model from {model_path} using {'GPU' if gpu_config['has_gpu'] else 'CPU'}")
         except Exception as e:
-            print(f"Error loading Gemma model: {str(e)}")
+            logger.error(f"Error loading Gemma model: {str(e)}")
             self.llm = None
         
         self.system_prompt = """You are a helpful and friendly AI assistant. You provide clear, accurate, and engaging responses to questions and tasks. 

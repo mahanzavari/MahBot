@@ -1,40 +1,39 @@
-import os
-from typing import Optional
 from llama_cpp import Llama
+import os
 from utils import check_gpu_availability
 import logging
 
 logger = logging.getLogger(__name__)
 
-class Gemma3Model:
+class Gemma312BModel:
     def __init__(self):
-        self.model_path = os.path.join(os.path.dirname(__file__), "models", "gemma-3-4b-it-q6_k.gguf")
+        self.model_path = os.path.join(os.path.dirname(__file__), "models", "google_gemma-3-12b-it-Q5_K_S.gguf")
         self.model = None
         self.load_model()
 
     def load_model(self):
-        """Load the Gemma 3 4B IT Q6_K model using llama-cpp."""
+        """Load the Gemma 3 12B IT Q5_K_S model using llama-cpp."""
         try:
             # Check GPU availability
             gpu_config = check_gpu_availability()
-            logger.info(f"Initializing Gemma 3 model with GPU config: {gpu_config}")
+            logger.info(f"Initializing Gemma 3 12B model with GPU config: {gpu_config}")
             
             self.model = Llama(
                 model_path=self.model_path,
-                n_ctx=2048,  # Context window
+                n_ctx=4096,  # Context window
                 n_threads=4,  # Number of CPU threads to use
                 n_gpu_layers=gpu_config['n_gpu_layers'],  # Use GPU layers based on availability
                 verbose=True,
                 embedding=False,
                 rope_scaling=None
             )
-            logger.info(f"Gemma 3 4B IT Q6_K model loaded successfully using {'GPU' if gpu_config['has_gpu'] else 'CPU'}")
+            logger.info(f"Gemma 3 12B IT Q5_K_S model loaded successfully using {'GPU' if gpu_config['has_gpu'] else 'CPU'}")
         except Exception as e:
-            logger.error(f"Error loading Gemma 3 4B IT Q6_K model: {str(e)}")
+            logger.error(f"Error loading Gemma 3 12B IT Q5_K_S model: {str(e)}")
             raise
 
-    def generate_response(self, messages: list, max_length: int = 2048) -> Optional[str]:
-        """Generate a response using the Gemma 3 4B IT Q6_K model."""
+    def generate_response(self, messages: list, max_length: int = 2048) -> str:
+        """Generate a response using the Gemma 3 12B IT Q5_K_S model."""
         try:
             if not self.model:
                 raise ValueError("Model not loaded")
@@ -45,7 +44,7 @@ class Gemma3Model:
             for msg in messages:
                 buffer.add_message(msg['role'], msg['content'])
             formatted_prompt = buffer.format_for_gemma3()
-            print(formatted_prompt)
+            
             # Generate response
             response = self.model(
                 formatted_prompt,
@@ -66,7 +65,7 @@ class Gemma3Model:
                 return None
 
         except Exception as e:
-            print(f"Error generating response: {str(e)}")
+            logger.error(f"Error generating response: {str(e)}")
             return None
 
     def __del__(self):

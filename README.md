@@ -8,6 +8,7 @@ A modern web-based legal chatbot application that leverages multiple AI models t
   - GEMMA Models:
     - Gemma 2B
     - Gemma 3 4B IT Q6_K
+    - Gemma 3 12B IT Q5_K_S
   - PHI Models:
     - Phi-3
 - User Authentication System
@@ -221,61 +222,26 @@ For detailed deployment instructions, please refer to the deployment documentati
 ### Google Colab Deployment
 To run this project on Google Colab:
 
-1. Create a new Colab notebook and run the following setup commands:
+1. Open Google Colab (https://colab.research.google.com)
+
+2. Clone the repository and run the setup script:
 ```python
 # Clone the repository
 !git clone <repository-url>
 %cd LegalQA-chatbot
 
-# Install system dependencies
-!apt-get update
-!apt-get install -y postgresql postgresql-contrib libpq-dev
-
-# Install Python dependencies
-!pip install -r requirements.txt
-
-# Start PostgreSQL service
-!service postgresql start
-
-# Create database and user
-!sudo -u postgres psql -c "CREATE USER colab_user WITH PASSWORD 'colab_password';"
-!sudo -u postgres psql -c "CREATE DATABASE MahBot_db;"
-!sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE MahBot_db TO colab_user;"
+# Run the Colab setup script
+!python run_colab.py
 ```
 
-2. Create a `.env` file in Colab:
-```python
-%%writefile .env
-SECRET_KEY=your-secret-key
-DATABASE_URL=postgresql://colab_user:colab_password@localhost:5432/MahBot_db
-MAIL_SERVER=smtp.gmail.com
-MAIL_PORT=587
-MAIL_USE_TLS=True
-MAIL_USERNAME=your-email@gmail.com
-MAIL_PASSWORD=your-app-password
-MAIL_DEFAULT_SENDER=your-email@gmail.com
-```
-
-3. Initialize the database:
-```python
-!flask db init
-!flask db migrate -m "Initial migration"
-!flask db upgrade
-```
-
-4. Start the Flask application with ngrok for external access:
-```python
-# Install ngrok
-!pip install pyngrok
-
-# Start ngrok in the background
-from pyngrok import ngrok
-ngrok_tunnel = ngrok.connect(5000)
-print('Public URL:', ngrok_tunnel.public_url)
-
-# Start Flask app
-!python app.py
-```
+The script will:
+- Install all required system dependencies
+- Set up PostgreSQL database
+- Install Python packages
+- Configure environment variables
+- Initialize the database
+- Set up ngrok for external access
+- Start the Flask application
 
 Important Notes for Colab:
 - Colab sessions are temporary and will reset when disconnected
@@ -283,6 +249,20 @@ Important Notes for Colab:
 - The ngrok URL will change each time you restart the notebook
 - Some features might be limited due to Colab's environment restrictions
 - GPU acceleration is available but not required for this application
+- Make sure to update the email configuration in the .env file with your actual email settings
+
+To use GPU acceleration in Colab:
+```Bash
+%cd MahBot
+!mkdir models
+
+!wget https://huggingface.co/bartowski/Phi-3-mini-4k-instruct-GGUF/resolve/main/Phi-3-mini-4k-instruct-Q5_K_S.gguf -O /content/MahBot/models/Phi-3-mini-4k-instruct-Q5_K_S.gguf
+!wget https://huggingface.co/codegood/gemma-2b-it-Q4_K_M-GGUF/resolve/main/gemma-2b-it.Q4_K_M.gguf -O /content/MahBot/models/gemma-2b-it.Q4_K_M.gguf
+!wget https://huggingface.co/Triangle104/gemma-3-4b-it-Q6_K-GGUF/resolve/main/gemma-3-4b-it-q6_k.gguf -O /content/MahBot/models/gemma-3-4b-it-q6_k.gguf
+```
+1. Go to Runtime > Change runtime type
+2. Select "GPU" as the Hardware accelerator
+3. The application will automatically detect and use the GPU if available
 
 3. Using the Chatbot:
    - Register/Login to your account
@@ -298,6 +278,7 @@ Important Notes for Colab:
 ### GEMMA Models
 - **Gemma 2B**: A lightweight model suitable for quick responses
 - **Gemma 3 4B IT Q6_K**: A more powerful model with improved performance
+- **Gemma 3 12B IT Q5_K_S**: The largest and most capable model, offering the best performance but requiring more resources
 
 ### PHI Models
 - **Phi-3**: Microsoft's latest model optimized for legal and technical content

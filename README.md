@@ -8,7 +8,6 @@ A modern web-based legal chatbot application that leverages multiple AI models t
   - GEMMA Models:
     - Gemma 2B
     - Gemma 3 4B IT Q6_K
-    - Gemma 3 12B IT Q5_K_S
   - PHI Models:
     - Phi-3
 - User Authentication System
@@ -278,7 +277,6 @@ To use GPU acceleration in Colab:
 ### GEMMA Models
 - **Gemma 2B**: A lightweight model suitable for quick responses
 - **Gemma 3 4B IT Q6_K**: A more powerful model with improved performance
-- **Gemma 3 12B IT Q5_K_S**: The largest and most capable model, offering the best performance but requiring more resources
 
 ### PHI Models
 - **Phi-3**: Microsoft's latest model optimized for legal and technical content

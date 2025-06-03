@@ -62,10 +62,7 @@ def setup_colab_environment():
         os.makedirs('models', exist_ok=True)
         
         # Download required models
-        run_command('wget https://huggingface.co/bartowski/Phi-3-mini-4k-instruct-GGUF/resolve/main/Phi-3-mini-4k-instruct-Q5_K_S.gguf -O /content/MahBot/models/Phi-3-mini-4k-instruct-Q5_K_S.gguf')
-        run_command('wget https://huggingface.co/codegood/gemma-2b-it-Q4_K_M-GGUF/resolve/main/gemma-2b-it.Q4_K_M.gguf -O /content/MahBot/models/gemma-2b-it.Q4_K_M.gguf')
-        run_command('wget https://huggingface.co/Triangle104/gemma-3-4b-it-Q6_K-GGUF/resolve/main/gemma-3-4b-it-q6_k.gguf -O /content/MahBot/models/gemma-3-4b-it-q6_k.gguf')
-        run_command('wget https://huggingface.co/Triangle104/gemma-3-12b-it-Q5_K_S-GGUF/resolve/main/google_gemma-3-12b-it-Q5_K_S.gguf -O /content/MahBot/models/google_gemma-3-12b-it-Q5_K_S.gguf')
+     
         
         # Create .env file
         env_content = """SECRET_KEY=colab-secret-key

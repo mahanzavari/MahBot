@@ -26,10 +26,7 @@ class GemmaModel:
                 n_ctx=4096,
                 n_threads=4,
                 n_batch=512,
-                n_gpu_layers=gpu_config['n_gpu_layers'],
-                verbose=True,
-                embedding=False,
-                rope_scaling=None
+                n_gpu_layers=gpu_config['n_gpu_layers']
             )
             logger.info(f"Successfully loaded Gemma model from {model_path} using {'GPU' if gpu_config['has_gpu'] else 'CPU'}")
         except Exception as e:

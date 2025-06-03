@@ -18,7 +18,6 @@ from utils import send_verification_email
 from phi_model import PhiModel
 from gemma_model import GemmaModel
 from gemma_3_model import Gemma3Model
-from gemma_3_12b_model import Gemma312BModel
 from chat_buffer import ChatBuffer
 import logging
 from googlesearch import search as google_search
@@ -66,13 +65,6 @@ try:
 except Exception as e:
     logger.error(f"Failed to load Gemma 3 model: {str(e)}")
     gemma_3_model = None
-
-try:
-    gemma_3_12b_model = Gemma312BModel()
-    logger.info("Gemma 3 12B model initialized successfully")
-except Exception as e:
-    logger.error(f"Failed to load Gemma 3 12B model: {str(e)}")
-    gemma_3_12b_model = None
 
 # Store chat buffers for each user
 chat_buffers = {}
@@ -300,13 +292,6 @@ def chat():
                     return
                 logger.info("Using Gemma 3 model for response generation")
                 response = gemma_3_model.generate_response(messages)
-            elif model_type == 'gemma-3-12b-it-q5_k_s':
-                if not gemma_3_12b_model:
-                    logger.error("Gemma 3 12B model not available")
-                    yield json.dumps({'error': 'Gemma 3 12B model is not available. Please try another model.'}) + '\n'
-                    return
-                logger.info("Using Gemma 3 12B model for response generation")
-                response = gemma_3_12b_model.generate_response(messages)
             elif model_type == 'phi':
                 if not phi_model:
                     logger.error("Phi model not available")

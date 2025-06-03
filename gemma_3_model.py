@@ -23,10 +23,7 @@ class Gemma3Model:
                 model_path=self.model_path,
                 n_ctx=2048,  # Context window
                 n_threads=4,  # Number of CPU threads to use
-                n_gpu_layers=gpu_config['n_gpu_layers'],  # Use GPU layers based on availability
-                verbose=True,
-                embedding=False,
-                rope_scaling=None
+                n_gpu_layers=gpu_config['n_gpu_layers']  # Use GPU layers based on availability
             )
             logger.info(f"Gemma 3 4B IT Q6_K model loaded successfully using {'GPU' if gpu_config['has_gpu'] else 'CPU'}")
         except Exception as e:

@@ -3,6 +3,10 @@ from flask_cors import CORS
 from flask_login import LoginManager, login_required, current_user
 from flask_migrate import Migrate
 from flask_mail import Mail, Message
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.prompts import ChatPromptTemplate, HumanMessagePromptTemplate, SystemMessagePromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+from langchain.chains import LLMChain
 import os
 import json
 import requests

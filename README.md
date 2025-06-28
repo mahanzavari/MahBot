@@ -2,6 +2,8 @@
 
 A modern web-based legal chatbot application that leverages multiple AI models to provide intelligent legal assistance. The application supports both local and cloud-based AI models, with features for chat history management, image analysis, and a beautiful, responsive user interface.
 
+![Screenshot from Calliope Chat screen](stuff\image.png)
+
 ## Features
 
 - Multiple AI Model Support:

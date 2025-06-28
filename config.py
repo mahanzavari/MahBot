@@ -10,6 +10,9 @@ class Config:
         'postgresql://postgres:13831377@localhost:5432/MahBot_db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
+    GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY') or 'AIzaSyAQnfFczNsZH5kqebcjT0iEOWe9Hhs5WnQ'
+
+    
     # Session configuration
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)
     
